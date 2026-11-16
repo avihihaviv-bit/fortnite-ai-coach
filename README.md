@@ -13,7 +13,7 @@ Under active development — see `docs/ARCHITECTURE.md` and the phase list below
 | Phase | Area | Status |
 |---|---|---|
 | 1 | Project structure & architecture | ✅ done |
-| 2 | Desktop UI | ⏳ |
+| 2 | Desktop UI (shell, 12 pages, RTL) | ✅ done |
 | 3 | SQLite & player profile | ⏳ |
 | 4 | Video import & processing | ⏳ |
 | 5 | Gemini integration (key optional) | ⏳ |
