@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# Build output
+build/
+dist/
+*.spec.bak
+
+# Secrets - NEVER commit
+.env
+*.key
+secrets*.json
+
+# Local app data / user content
+*.db
+*.sqlite
+*.sqlite3
+data/
+cache/
+*.mp4
+*.mov
+*.mkv
+*.webm
+!tests/fixtures/**/*.json
+
+# Bundled ffmpeg binaries (download separately)
+vendor/ffmpeg/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
