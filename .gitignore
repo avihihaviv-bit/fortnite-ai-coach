@@ -36,3 +36,6 @@ vendor/ffmpeg/
 Thumbs.db
 .vscode/
 .idea/
+
+# Distribution archives
+*.zip
