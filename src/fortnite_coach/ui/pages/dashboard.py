@@ -3,6 +3,7 @@ from __future__ import annotations
 from PySide6.QtWidgets import QGridLayout, QHBoxLayout, QLabel, QWidget
 
 from fortnite_coach.core.skills import ALL_SKILLS
+from fortnite_coach.db.repositories.stats_repo import DashboardStats
 from fortnite_coach.i18n.translator import tr
 from fortnite_coach.ui.pages.base import BasePage
 from fortnite_coach.ui.theme import Colors
@@ -63,19 +64,27 @@ class DashboardPage(BasePage):
         self.recent_empty = EmptyState("history")
         self.recent_card.body.addWidget(self.recent_empty)
         self.content.addWidget(self.recent_card)
+        self.stats = DashboardStats()
         self.finish()
+
+    def refresh(self, stats: DashboardStats) -> None:
+        self.stats = stats
+        self.retranslate()
 
     def retranslate(self) -> None:
         super().retranslate()
         nd = tr("common.not_enough_data")
-        self.tile_rating.set_data(tr("dash.overall_rating"), None, nd, tr("common.ai_estimate"))
-        self.tile_sessions.set_data(tr("dash.total_sessions"), "0", nd, tr("common.measured"))
-        self.tile_strongest.set_data(tr("dash.strongest"), None, nd)
-        self.tile_weakest.set_data(tr("dash.weakest"), None, nd)
+        st = self.stats
+        overall = None if st.overall is None else f"{st.overall:.0f}"
+        self.tile_rating.set_data(tr("dash.overall_rating"), overall, nd, tr("common.ai_estimate"))
+        self.tile_sessions.set_data(tr("dash.total_sessions"), str(st.analyzed_sessions), nd, tr("common.measured"))
+        self.tile_strongest.set_data(tr("dash.strongest"), st.strongest and tr(f"skill.{st.strongest}"), nd)
+        self.tile_weakest.set_data(tr("dash.weakest"), st.weakest and tr(f"skill.{st.weakest}"), nd)
         self.skills_card.set_title(tr("dash.skill_ratings"), tr("dash.skill_ratings_sub"))
         for key, (name, value) in self.skill_rows.items():
             name.setText(tr(f"skill.{key}"))
-            value.setText(nd)
+            stat = st.skills.get(key)
+            value.setText(nd if stat is None else tr("dash.skill_value", score=f"{stat.average:.0f}", n=stat.samples))
         self.priorities_card.set_title(tr("dash.priorities"))
         self.priorities_empty.set_text(tr("dash.empty_title"), tr("dash.priorities_empty"))
         self.weekly_card.set_title(tr("dash.weekly"))

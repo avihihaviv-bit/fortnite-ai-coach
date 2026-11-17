@@ -141,5 +141,18 @@
   "settings.language_label": "שפת הממשק",
   "settings.gemini": "Gemini AI",
   "settings.gemini_sub": "בשימוש רק כשאתה מתחיל ניתוח.",
-  "settings.gemini_pending": "הזנת מפתח API, שמירה מאובטחת (Windows Credential Manager) ובדיקת חיבור יתווספו בשלב 5. עד אז ניתוח AI מושבת ואף דוח לא מדומה."
+  "settings.gemini_pending": "הזנת מפתח API, שמירה מאובטחת (Windows Credential Manager) ובדיקת חיבור יתווספו בשלב 5. עד אז ניתוח AI מושבת ואף דוח לא מדומה.",
+  "dash.skill_value": "{score} · {n} משחקים",
+  "settings.data": "הנתונים שלך",
+  "settings.data_sub": "נשמרים רק במחשב הזה. קבצי הווידאו שלך אף פעם לא מועתקים ולא נמחקים.",
+  "settings.data_counts": "{sessions} משחקים · {reports} דוחות · {videos} סרטונים מקושרים",
+  "settings.data_path": "תיקיית נתונים: {path}",
+  "settings.clear_cache": "ניקוי מטמון",
+  "settings.clear_cache_tip": "מוחק פריימים וקטעים דחוסים שחולצו. הדוחות נשמרים.",
+  "settings.clear_cache_confirm": "למחוק את כל הפריימים והקטעים השמורים? הדוחות והסרטונים שלך לא יושפעו.",
+  "settings.delete_all": "מחיקת כל נתוני הניתוח",
+  "settings.delete_all_tip": "מוחק משחקים, דוחות, ציונים, טעויות, תוכניות אימון והיסטוריית שימוש.",
+  "settings.delete_all_confirm": "למחוק לצמיתות את כל המשחקים, הדוחות, הציונים, תוכניות האימון והיסטוריית השימוש? קבצי הווידאו נשארים בדיסק. אי אפשר לבטל את זה.",
+  "settings.cache_cleared": "המטמון נוקה (שוחררו {mb} MB).",
+  "settings.data_deleted": "כל נתוני הניתוח נמחקו."
 }

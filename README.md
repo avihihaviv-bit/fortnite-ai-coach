@@ -14,7 +14,7 @@ Under active development — see `docs/ARCHITECTURE.md` and the phase list below
 |---|---|---|
 | 1 | Project structure & architecture | ✅ done |
 | 2 | Desktop UI (shell, 12 pages, RTL) | ✅ done |
-| 3 | SQLite & player profile | ⏳ |
+| 3 | SQLite, settings persistence, data deletion | ✅ done |
 | 4 | Video import & processing | ⏳ |
 | 5 | Gemini integration (key optional) | ⏳ |
 | 6 | Coaching analysis pipeline | ⏳ |

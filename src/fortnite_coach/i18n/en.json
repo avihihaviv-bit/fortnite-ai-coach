@@ -141,5 +141,18 @@
   "settings.language_label": "Interface language",
   "settings.gemini": "Gemini AI",
   "settings.gemini_sub": "Used only when you start an analysis.",
-  "settings.gemini_pending": "API key entry, secure storage (Windows Credential Manager) and connection testing are added in Phase 5. Until then AI analysis is disabled and no report is ever simulated."
+  "settings.gemini_pending": "API key entry, secure storage (Windows Credential Manager) and connection testing are added in Phase 5. Until then AI analysis is disabled and no report is ever simulated.",
+  "dash.skill_value": "{score} · {n} sessions",
+  "settings.data": "Your data",
+  "settings.data_sub": "Stored only on this computer. Your video files are never copied or deleted.",
+  "settings.data_counts": "{sessions} sessions · {reports} reports · {videos} videos referenced",
+  "settings.data_path": "Data folder: {path}",
+  "settings.clear_cache": "Clear cache",
+  "settings.clear_cache_tip": "Deletes extracted frames and compressed clips. Reports are kept.",
+  "settings.clear_cache_confirm": "Delete all cached frames and clips? Your reports and videos are not affected.",
+  "settings.delete_all": "Delete all analysis data",
+  "settings.delete_all_tip": "Deletes sessions, reports, scores, mistakes, training plans and usage history.",
+  "settings.delete_all_confirm": "Permanently delete all sessions, reports, scores, training plans and usage history? Your video files stay on disk. This cannot be undone.",
+  "settings.cache_cleared": "Cache cleared ({mb} MB freed).",
+  "settings.data_deleted": "All analysis data was deleted."
 }

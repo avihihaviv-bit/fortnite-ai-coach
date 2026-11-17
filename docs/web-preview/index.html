@@ -1,0 +1,167 @@
+<title>Fortnite AI Coach</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Rubik:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: desktop-app frame — fixed sidebar + scrolling page; stacks to top nav on phones. Single dark look, same as the app. */
+:root {
+  --bg: #121317; --panel: #1A1C22; --panel-dark: #0E0F12; --hover: #22252D; --border: #2A2D36;
+  --text: #E8EAF0; --muted: #8B90A0; --faint: #5C6170;
+  --blue: #3B82F6; --purple: #8B5CF6; --green: #22C55E; --amber: #F59E0B;
+  --font: "Inter", "Rubik", "Segoe UI", system-ui, sans-serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; }
+* { box-sizing: border-box; }
+button { font: inherit; color: inherit; }
+button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+.banner {
+  background: linear-gradient(90deg, rgba(59,130,246,.18), rgba(139,92,246,.18));
+  border-bottom: 1px solid var(--border); color: #C9D4F5; font-size: 12.5px;
+  padding-block: 8px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap;
+}
+.lang-btn { background: var(--hover); border: 1px solid var(--border); border-radius: 8px; padding: 5px 12px; cursor: pointer; font-weight: 600; }
+.lang-btn:hover { border-color: var(--blue); }
+
+.app { display: flex; height: calc(100% - 40px); min-height: 560px; }
+.sidebar { width: 236px; flex: none; background: var(--panel-dark); padding: 20px 12px 16px; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; }
+.logo-accent { font-size: 11px; font-weight: 700; letter-spacing: 2px; color: var(--purple); }
+.logo { font-size: 19px; font-weight: 700; margin-bottom: 10px; letter-spacing: .5px; }
+.section { color: var(--faint); font-size: 10.5px; font-weight: 700; letter-spacing: 1px; padding: 10px 14px 4px; }
+.nav { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-weight: 500; cursor: pointer; text-align: start; width: 100%; }
+.nav svg { width: 18px; height: 18px; flex: none; stroke: currentColor; }
+.nav:hover { background: var(--hover); color: var(--text); }
+.nav.active { background: linear-gradient(90deg, rgba(59,130,246,.22), rgba(139,92,246,.10)); color: var(--text); font-weight: 600; }
+[dir="rtl"] .nav.active { background: linear-gradient(270deg, rgba(59,130,246,.22), rgba(139,92,246,.10)); }
+.nav.active svg { stroke: var(--blue); }
+.spacer { flex: 1; min-height: 16px; }
+.pill { border-radius: 10px; padding: 7px 10px; font-size: 12px; font-weight: 600; background: var(--hover); color: var(--muted); }
+
+main { flex: 1; min-width: 0; overflow-y: auto; padding: 28px 32px; display: flex; flex-direction: column; gap: 18px; }
+.head { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; }
+h1 { font-size: 26px; margin: 0 0 4px; text-wrap: balance; }
+.sub { color: var(--muted); margin: 0; }
+.dev { background: rgba(139,92,246,.16); color: #C4B5FD; border-radius: 8px; padding: 4px 9px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+
+.card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.card h2 { font-size: 14.5px; margin: 0; font-weight: 600; }
+.card .csub { color: var(--muted); font-size: 12px; margin: 2px 0 0; }
+.grid4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.row { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.tiles2 { display: grid; grid-template-columns: repeat(2, minmax(0, 220px)); gap: 16px; }
+.tile .bar { width: 28px; height: 4px; border-radius: 2px; }
+.tile .label { color: var(--muted); font-size: 11.5px; font-weight: 600; letter-spacing: .4px; }
+.tile .value { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.tile .value.empty { font-size: 15px; color: var(--faint); font-weight: 600; }
+.tile .hint { color: var(--faint); font-size: 11px; }
+.skills { display: grid; grid-template-columns: 1fr auto 1fr auto; gap: 10px 24px; }
+.skills .v { color: var(--faint); font-size: 11.5px; }
+.empty-state { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 20px 8px; }
+.empty-state svg { width: 36px; height: 36px; stroke: var(--purple); }
+.empty-state b { font-size: 15px; }
+.empty-state p { color: var(--muted); margin: 0; max-width: 60ch; }
+ul.rubric { margin: 0; padding-inline-start: 20px; display: flex; flex-direction: column; gap: 8px; }
+.note { color: var(--faint); font-size: 11.5px; }
+.form { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+select { background: var(--panel-dark); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; font: inherit; min-width: 180px; }
+
+@media (max-width: 900px) {
+  .grid4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .row, .row2 { grid-template-columns: 1fr; }
+}
+@media (max-width: 680px) {
+  .app { flex-direction: column; height: auto; }
+  .sidebar { width: auto; flex-direction: row; flex-wrap: nowrap; overflow-x: auto; padding: 10px 16px; gap: 4px; }
+  .logo-accent, .logo, .section, .spacer { display: none; }
+  .nav { width: auto; white-space: nowrap; }
+  .pill { white-space: nowrap; align-self: center; }
+  main { padding: 20px 16px; overflow: visible; }
+  .skills { grid-template-columns: 1fr auto; }
+  .tiles2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (prefers-reduced-motion: no-preference) { main > * { animation: in .25s ease-out both; } }
+@keyframes in { from { transform: translateY(4px); } to { transform: none; } }
+</style>
+
+<div class="banner"><span id="banner"></span><button class="lang-btn" id="lang" type="button"></button></div>
+<div class="app">
+  <nav class="sidebar" id="sidebar"></nav>
+  <main id="page"></main>
+</div>
+
+<script>
+const CAT = {"en": {"app.title": "Fortnite AI Coach", "app.tagline": "Post-session coaching. Nothing runs while you play.", "nav.dashboard": "Dashboard", "nav.gameplay": "Gameplay Analysis", "nav.training_sessions": "Training Sessions", "nav.building": "Building", "nav.editing": "Editing", "nav.piece_control": "Piece Control", "nav.aim": "Aim", "nav.game_sense": "Game Sense", "nav.training_plan": "Training Plan", "nav.progress": "Progress", "nav.history": "History", "nav.settings": "Settings", "skill.building": "Building", "skill.editing": "Editing", "skill.piece_control": "Piece Control", "skill.aim": "Aim", "skill.movement": "Movement", "skill.mechanics": "Mechanics", "skill.game_sense": "Game Sense", "skill.positioning": "Positioning", "skill.decision_making": "Decision Making", "skill.fight_execution": "Fight Execution", "mode.creative_free_build": "Creative Free Build", "mode.realistic_1v1": "Realistic 1v1", "mode.box_fights": "Box Fights", "mode.zone_wars": "Zone Wars", "mode.ranked": "Ranked", "mode.battle_royale": "Battle Royale", "mode.other": "Other", "depth.quick": "Quick", "depth.standard": "Standard", "depth.detailed": "Detailed", "common.not_enough_data": "Not enough data", "common.ai_estimate": "AI estimate", "common.measured": "Measured", "common.cancel": "Cancel", "common.save": "Save", "common.delete": "Delete", "common.loading": "Loading…", "gemini.not_configured": "API key not configured", "gemini.not_connected": "Gemini not connected", "gemini.configured_untested": "API key saved - connection not tested yet", "gemini.connected": "Gemini connected", "gemini.error": "Gemini connection error", "error.generic": "Something went wrong.", "error.video": "The video could not be processed.", "error.ffmpeg_missing": "FFmpeg was not found. Install it or set its path in Settings.", "error.gemini": "The Gemini request failed.", "error.usage_limit": "Usage limit reached. No request was sent.", "error.cancelled": "Operation cancelled.", "language.he": "עברית", "language.en": "English", "nav.section.overview": "OVERVIEW", "nav.section.analyze": "ANALYZE", "nav.section.skills": "SKILLS", "nav.section.improve": "IMPROVE", "nav.section.app": "APP", "common.in_development": "In development · Phase {phase}", "common.in_development_tip": "This page is not functional yet. It will be completed in the phase shown.", "gemini.status_tip": "AI analysis is available only after a Gemini API key is saved and tested in Settings.", "page.dashboard.subtitle": "Your overall picture, built only from analyzed sessions.", "page.gameplay.subtitle": "Analyze a finished match recording after you stop playing.", "page.training_sessions.subtitle": "Analyze Creative training recordings (free build, 1v1, box fights, zone wars).", "page.building.subtitle": "Placement, sequences, height control and defensive building.", "page.editing.subtitle": "Edit accuracy, timing, crosshair placement and exposure after edits.", "page.piece_control.subtitle": "Taking and keeping control of walls, cones and floors.", "page.aim.subtitle": "What can be seen on screen: crosshair placement, tracking and shot timing.", "page.game_sense.subtitle": "Fight timing, positioning, risk and engagement decisions.", "page.training_plan.subtitle": "Exercises chosen from your real mistakes.", "page.progress.subtitle": "Ratings over time and repeated vs. resolved mistakes.", "page.history.subtitle": "Every analyzed session and its report.", "page.settings.subtitle": "Language, Gemini connection, usage limits and data.", "page.gameplay.empty_title": "Video analysis is being built", "page.gameplay.empty_text": "Here you will select a finished recording (MP4, MOV, MKV, WebM), preview it, see its metadata and start an analysis.", "page.training_sessions.empty_title": "Training analysis is being built", "page.training_sessions.empty_text": "Here you will analyze Creative training recordings with training-focused feedback.", "page.training_plan.empty_title": "No training plan yet", "page.training_plan.empty_text": "A personal plan is created from the mistakes found in your analyzed sessions. Analyze a session first.", "page.progress.empty_title": "No progress data yet", "page.progress.empty_text": "Charts appear after at least two analyzed sessions. Nothing is estimated without data.", "page.history.empty_title": "No analyzed sessions yet", "page.history.empty_text": "Every session you analyze will be listed here with its full report.", "dash.overall_rating": "Overall rating", "dash.total_sessions": "Analyzed sessions", "dash.strongest": "Strongest skill", "dash.weakest": "Weakest skill", "dash.skill_ratings": "Skill ratings", "dash.skill_ratings_sub": "AI estimates from video evidence. Skills without evidence stay empty.", "dash.priorities": "Current training priorities", "dash.empty_title": "Nothing to prioritize yet", "dash.priorities_empty": "Your three biggest weaknesses will appear here after your first analysis.", "dash.weekly": "Weekly performance", "dash.weekly_empty": "Weekly trends appear once you have analyzed sessions in more than one week.", "dash.repeated_mistakes": "Repeated mistakes & improvements", "dash.improvements_sub": "Mistakes seen in 2+ sessions, and ones you have stopped making.", "dash.mistakes_empty": "Needs at least two analyzed sessions.", "dash.recent": "Recent analyses", "dash.recent_empty_title": "No analyses yet", "dash.recent_empty": "Go to Gameplay Analysis or Training Sessions after you finish playing.", "skillpage.score": "Skill score", "skillpage.sessions": "Sessions with evidence", "skillpage.rubric": "What the coach evaluates", "skillpage.rubric_sub": "Only what is visible in your recording is judged.", "skillpage.findings": "Findings", "skillpage.findings_empty": "Timestamped findings for this skill will appear after an analysis.", "rubric.building.1": "Build placement", "rubric.building.2": "Build sequences", "rubric.building.3": "Height control", "rubric.building.4": "Defensive building", "rubric.building.5": "Consistency", "rubric.building.6": "Unnecessary building", "rubric.editing.1": "Edit accuracy", "rubric.editing.2": "Edit timing", "rubric.editing.3": "Failed edits", "rubric.editing.4": "Repeated edits", "rubric.editing.5": "Crosshair placement", "rubric.editing.6": "Exposure after editing", "rubric.piece_control.1": "Wall control", "rubric.piece_control.2": "Cone control", "rubric.piece_control.3": "Floor control", "rubric.piece_control.4": "Opponent isolation", "rubric.piece_control.5": "Piece placement", "rubric.piece_control.6": "Protection before attacking", "rubric.aim.1": "Visible crosshair placement", "rubric.aim.2": "Tracking", "rubric.aim.3": "Shot timing", "rubric.aim.4": "Visible missed shots", "rubric.aim.5": "Positioning before engagements", "rubric.aim.note": "Not measured from video: real mouse accuracy, DPI, sensitivity or reaction time.", "rubric.game_sense.1": "Fight timing", "rubric.game_sense.2": "Positioning", "rubric.game_sense.3": "Risk management", "rubric.game_sense.4": "Engagement decisions", "rubric.game_sense.5": "Defensive decisions", "rubric.game_sense.6": "Resource management (when visible)", "rubric.game_sense.7": "Disengagement decisions", "settings.language": "Language", "settings.language_label": "Interface language", "settings.gemini": "Gemini AI", "settings.gemini_sub": "Used only when you start an analysis.", "settings.gemini_pending": "API key entry, secure storage (Windows Credential Manager) and connection testing are added in Phase 5. Until then AI analysis is disabled and no report is ever simulated.", "preview.banner": "Web preview of the desktop app's design. Video analysis runs only in the Windows app.", "preview.lang": "עברית"}, "he": {"app.title": "Fortnite AI Coach", "app.tagline": "אימון אחרי המשחק. שום דבר לא רץ בזמן שאתה משחק.", "nav.dashboard": "לוח בקרה", "nav.gameplay": "ניתוח משחק", "nav.training_sessions": "אימונים", "nav.building": "בנייה", "nav.editing": "עריכות", "nav.piece_control": "שליטה בחלקים", "nav.aim": "כיוון", "nav.game_sense": "חוש משחק", "nav.training_plan": "תוכנית אימון", "nav.progress": "התקדמות", "nav.history": "היסטוריה", "nav.settings": "הגדרות", "skill.building": "בנייה", "skill.editing": "עריכות", "skill.piece_control": "שליטה בחלקים", "skill.aim": "כיוון", "skill.movement": "תנועה", "skill.mechanics": "מכניקה", "skill.game_sense": "חוש משחק", "skill.positioning": "מיקום", "skill.decision_making": "קבלת החלטות", "skill.fight_execution": "ביצוע קרבות", "mode.creative_free_build": "קריאייטיב - בנייה חופשית", "mode.realistic_1v1": "ריאליסטיק 1 על 1", "mode.box_fights": "בוקס פייטס", "mode.zone_wars": "זון וורס", "mode.ranked": "דירוג (Ranked)", "mode.battle_royale": "באטל רויאל", "mode.other": "אחר", "depth.quick": "מהיר", "depth.standard": "רגיל", "depth.detailed": "מפורט", "common.not_enough_data": "אין מספיק נתונים", "common.ai_estimate": "הערכת AI", "common.measured": "נמדד", "common.cancel": "ביטול", "common.save": "שמירה", "common.delete": "מחיקה", "common.loading": "טוען…", "gemini.not_configured": "מפתח API לא הוגדר", "gemini.not_connected": "Gemini לא מחובר", "gemini.configured_untested": "מפתח API נשמר - החיבור עוד לא נבדק", "gemini.connected": "Gemini מחובר", "gemini.error": "שגיאת חיבור ל-Gemini", "error.generic": "משהו השתבש.", "error.video": "לא ניתן לעבד את הווידאו.", "error.ffmpeg_missing": "FFmpeg לא נמצא. התקן אותו או הגדר את הנתיב בהגדרות.", "error.gemini": "הבקשה ל-Gemini נכשלה.", "error.usage_limit": "הגעת למגבלת השימוש. לא נשלחה בקשה.", "error.cancelled": "הפעולה בוטלה.", "language.he": "עברית", "language.en": "English", "nav.section.overview": "סקירה", "nav.section.analyze": "ניתוח", "nav.section.skills": "מיומנויות", "nav.section.improve": "שיפור", "nav.section.app": "אפליקציה", "common.in_development": "בפיתוח · שלב {phase}", "common.in_development_tip": "הדף הזה עדיין לא פעיל. הוא יושלם בשלב המצוין.", "gemini.status_tip": "ניתוח AI זמין רק אחרי שמפתח Gemini נשמר ונבדק בהגדרות.", "page.dashboard.subtitle": "התמונה הכללית שלך, רק מתוך משחקים שנותחו.", "page.gameplay.subtitle": "נתח הקלטה של משחק שהסתיים, אחרי שסיימת לשחק.", "page.training_sessions.subtitle": "נתח הקלטות אימון בקריאייטיב (בנייה חופשית, 1 על 1, בוקס פייטס, זון וורס).", "page.building.subtitle": "מיקום בנייה, רצפים, שליטה בגובה ובנייה הגנתית.", "page.editing.subtitle": "דיוק עריכות, תזמון, מיקום כוונת וחשיפה אחרי עריכה.", "page.piece_control.subtitle": "השתלטות ושמירה על קירות, קונוסים ורצפות.", "page.aim.subtitle": "מה שנראה במסך: מיקום כוונת, מעקב ותזמון יריות.", "page.game_sense.subtitle": "תזמון קרבות, מיקום, ניהול סיכונים והחלטות התקלות.", "page.training_plan.subtitle": "תרגילים שנבחרו לפי הטעויות האמיתיות שלך.", "page.progress.subtitle": "דירוגים לאורך זמן וטעויות חוזרות מול טעויות שתוקנו.", "page.history.subtitle": "כל משחק שנותח והדוח שלו.", "page.settings.subtitle": "שפה, חיבור Gemini, מגבלות שימוש ונתונים.", "page.gameplay.empty_title": "ניתוח הווידאו בבנייה", "page.gameplay.empty_text": "כאן תבחר הקלטה שהסתיימה בפורמט MP4, MOV, MKV או WebM, תצפה בה, תראה את הנתונים שלה ותתחיל ניתוח.", "page.training_sessions.empty_title": "ניתוח האימונים בבנייה", "page.training_sessions.empty_text": "כאן תנתח הקלטות אימון בקריאייטיב עם משוב שמותאם לאימון.", "page.training_plan.empty_title": "עדיין אין תוכנית אימון", "page.training_plan.empty_text": "תוכנית אישית נבנית מהטעויות שנמצאו במשחקים שנותחו. נתח משחק קודם.", "page.progress.empty_title": "עדיין אין נתוני התקדמות", "page.progress.empty_text": "הגרפים יופיעו אחרי לפחות שני משחקים שנותחו. שום דבר לא מוערך בלי נתונים.", "page.history.empty_title": "עדיין אין משחקים שנותחו", "page.history.empty_text": "כל משחק שתנתח יופיע כאן עם הדוח המלא.", "dash.overall_rating": "דירוג כללי", "dash.total_sessions": "משחקים שנותחו", "dash.strongest": "המיומנות החזקה", "dash.weakest": "המיומנות החלשה", "dash.skill_ratings": "דירוג מיומנויות", "dash.skill_ratings_sub": "הערכות AI מתוך ראיות בווידאו. מיומנות בלי ראיות נשארת ריקה.", "dash.priorities": "עדיפויות אימון נוכחיות", "dash.empty_title": "עדיין אין מה לתעדף", "dash.priorities_empty": "שלוש החולשות הגדולות שלך יופיעו כאן אחרי הניתוח הראשון.", "dash.weekly": "ביצועים שבועיים", "dash.weekly_empty": "מגמות שבועיות יופיעו כשיהיו משחקים מנותחים ביותר משבוע אחד.", "dash.repeated_mistakes": "טעויות חוזרות ושיפורים", "dash.improvements_sub": "טעויות שהופיעו ב-2 משחקים או יותר, וטעויות שהפסקת לעשות.", "dash.mistakes_empty": "נדרשים לפחות שני משחקים מנותחים.", "dash.recent": "ניתוחים אחרונים", "dash.recent_empty_title": "עדיין אין ניתוחים", "dash.recent_empty": "עבור לניתוח משחק או לאימונים אחרי שסיימת לשחק.", "skillpage.score": "ציון מיומנות", "skillpage.sessions": "משחקים עם ראיות", "skillpage.rubric": "מה המאמן בודק", "skillpage.rubric_sub": "נבדק רק מה שנראה בהקלטה שלך.", "skillpage.findings": "ממצאים", "skillpage.findings_empty": "ממצאים עם חותמות זמן למיומנות הזו יופיעו אחרי ניתוח.", "rubric.building.1": "מיקום הבנייה", "rubric.building.2": "רצפי בנייה", "rubric.building.3": "שליטה בגובה", "rubric.building.4": "בנייה הגנתית", "rubric.building.5": "עקביות", "rubric.building.6": "בנייה מיותרת", "rubric.editing.1": "דיוק עריכות", "rubric.editing.2": "תזמון עריכות", "rubric.editing.3": "עריכות שנכשלו", "rubric.editing.4": "עריכות חוזרות", "rubric.editing.5": "מיקום כוונת", "rubric.editing.6": "חשיפה אחרי עריכה", "rubric.piece_control.1": "שליטה בקירות", "rubric.piece_control.2": "שליטה בקונוסים", "rubric.piece_control.3": "שליטה ברצפות", "rubric.piece_control.4": "בידוד היריב", "rubric.piece_control.5": "מיקום חלקים", "rubric.piece_control.6": "הגנה לפני התקפה", "rubric.aim.1": "מיקום כוונת נראה לעין", "rubric.aim.2": "מעקב אחרי מטרה", "rubric.aim.3": "תזמון יריות", "rubric.aim.4": "החטאות נראות לעין", "rubric.aim.5": "מיקום לפני התקלות", "rubric.aim.note": "לא נמדד מווידאו: דיוק עכבר אמיתי, DPI, רגישות או זמן תגובה.", "rubric.game_sense.1": "תזמון קרבות", "rubric.game_sense.2": "מיקום", "rubric.game_sense.3": "ניהול סיכונים", "rubric.game_sense.4": "החלטות התקלות", "rubric.game_sense.5": "החלטות הגנתיות", "rubric.game_sense.6": "ניהול משאבים (כשנראה)", "rubric.game_sense.7": "החלטות התנתקות מקרב", "settings.language": "שפה", "settings.language_label": "שפת הממשק", "settings.gemini": "Gemini AI", "settings.gemini_sub": "בשימוש רק כשאתה מתחיל ניתוח.", "settings.gemini_pending": "הזנת מפתח API, שמירה מאובטחת (Windows Credential Manager) ובדיקת חיבור יתווספו בשלב 5. עד אז ניתוח AI מושבת ואף דוח לא מדומה.", "preview.banner": "תצוגה מקדימה באתר של עיצוב האפליקציה. ניתוח וידאו רץ רק באפליקציית Windows.", "preview.lang": "English"}};
+const ICONS = {"dashboard": "<rect x=\"3\" y=\"3\" width=\"7\" height=\"9\" rx=\"1.5\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"5\" rx=\"1.5\"/><rect x=\"14\" y=\"12\" width=\"7\" height=\"9\" rx=\"1.5\"/><rect x=\"3\" y=\"16\" width=\"7\" height=\"5\" rx=\"1.5\"/>", "gameplay": "<rect x=\"2\" y=\"5\" width=\"20\" height=\"14\" rx=\"2\"/><path d=\"M10 9l5 3-5 3z\"/>", "training_sessions": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><circle cx=\"12\" cy=\"12\" r=\"5\"/><circle cx=\"12\" cy=\"12\" r=\"1.5\"/>", "building": "<path d=\"M3 21h18\"/><path d=\"M5 21V10l7-6 7 6v11\"/><path d=\"M9 21v-6h6v6\"/>", "editing": "<path d=\"M4 20h4L19 9l-4-4L4 16z\"/><path d=\"M13 7l4 4\"/>", "piece_control": "<rect x=\"3\" y=\"3\" width=\"8\" height=\"8\" rx=\"1\"/><rect x=\"13\" y=\"13\" width=\"8\" height=\"8\" rx=\"1\"/><path d=\"M13 7h4a2 2 0 0 1 2 2v2\"/><path d=\"M11 17H7a2 2 0 0 1-2-2v-2\"/>", "aim": "<circle cx=\"12\" cy=\"12\" r=\"8\"/><path d=\"M12 2v5M12 17v5M2 12h5M17 12h5\"/>", "game_sense": "<path d=\"M9 18h6M10 21h4\"/><path d=\"M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z\"/>", "training_plan": "<rect x=\"4\" y=\"4\" width=\"16\" height=\"17\" rx=\"2\"/><path d=\"M8 2v4M16 2v4M4 10h16\"/><path d=\"M8 15l2 2 4-4\"/>", "progress": "<path d=\"M3 3v18h18\"/><path d=\"M7 15l4-4 3 3 6-6\"/><path d=\"M16 8h4v4\"/>", "history": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 7v5l3 2\"/>", "settings": "<circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1\"/>", "upload": "<path d=\"M12 16V4M7 9l5-5 5 5\"/><path d=\"M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3\"/>", "info": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 11v6M12 7.5v.5\"/>", "spark": "<path d=\"M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z\"/>"};
+const SECTIONS = [
+  ["nav.section.overview", ["dashboard"]],
+  ["nav.section.analyze", ["gameplay", "training_sessions"]],
+  ["nav.section.skills", ["building", "editing", "piece_control", "aim", "game_sense"]],
+  ["nav.section.improve", ["training_plan", "progress", "history"]],
+  ["nav.section.app", ["settings"]],
+];
+const SKILLS = ["building","editing","piece_control","aim","movement","mechanics","game_sense","positioning","decision_making","fight_execution"];
+const RUBRIC = { building: 6, editing: 6, piece_control: 6, aim: 5, game_sense: 7 };
+const DEV = { gameplay: 4, training_sessions: 4, training_plan: 7, progress: 8, history: 8 };
+let lang = "he", current = "dashboard";
+try { lang = localStorage.getItem("lang") || "he"; } catch (e) {}
+const t = (k, p) => { let s = CAT[lang][k] ?? CAT.en[k] ?? k; if (p) for (const [a, b] of Object.entries(p)) s = s.replace(`{${a}}`, b); return s; };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const icon = n => `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ICONS.info}</svg>`;
+const empty = (ic, title, text) => `<div class="empty-state">${icon(ic)}<b>${esc(title)}</b><p>${esc(text)}</p></div>`;
+const tile = (color, label, value, hint) => `<div class="card tile"><div class="bar" style="background:var(--${color})"></div><div class="label">${esc(label)}</div><div class="value${value == null ? " empty" : ""}">${esc(value ?? t("common.not_enough_data"))}</div>${hint ? `<div class="hint">${esc(hint)}</div>` : ""}</div>`;
+const card = (title, sub, body) => `<section class="card"><div><h2>${esc(title)}</h2>${sub ? `<p class="csub">${esc(sub)}</p>` : ""}</div>${body}</section>`;
+
+function renderSidebar() {
+  let h = `<div class="logo-accent">AI COACH</div><div class="logo">FORTNITE</div>`;
+  for (const [sec, keys] of SECTIONS) {
+    h += `<div class="section">${esc(t(sec))}</div>`;
+    for (const k of keys) h += `<button type="button" class="nav${k === current ? " active" : ""}" data-k="${k}" title="${esc(t(`page.${k}.subtitle`))}">${icon(k)}<span>${esc(t(`nav.${k}`))}</span></button>`;
+  }
+  h += `<div class="spacer"></div><div class="pill" title="${esc(t("gemini.status_tip"))}">●&nbsp; ${esc(t("gemini.not_configured"))}</div>`;
+  document.getElementById("sidebar").innerHTML = h;
+}
+
+function pageBody(k) {
+  const nd = t("common.not_enough_data");
+  if (k === "dashboard") {
+    const skills = SKILLS.map(s => `<span>${esc(t(`skill.${s}`))}</span><span class="v">${esc(nd)}</span>`).join("");
+    return `<div class="grid4">${tile("purple", t("dash.overall_rating"), null, t("common.ai_estimate"))}${tile("blue", t("dash.total_sessions"), "0", t("common.measured"))}${tile("green", t("dash.strongest"), null)}${tile("amber", t("dash.weakest"), null)}</div>
+      <div class="row">${card(t("dash.skill_ratings"), t("dash.skill_ratings_sub"), `<div class="skills">${skills}</div>`)}${card(t("dash.priorities"), "", empty("training_plan", t("dash.empty_title"), t("dash.priorities_empty")))}</div>
+      <div class="row2">${card(t("dash.weekly"), "", empty("progress", nd, t("dash.weekly_empty")))}${card(t("dash.repeated_mistakes"), t("dash.improvements_sub"), empty("info", nd, t("dash.mistakes_empty")))}</div>
+      ${card(t("dash.recent"), "", empty("history", t("dash.recent_empty_title"), t("dash.recent_empty")))}`;
+  }
+  if (RUBRIC[k]) {
+    let items = ""; for (let i = 1; i <= RUBRIC[k]; i++) items += `<li>${esc(t(`rubric.${k}.${i}`))}</li>`;
+    const nk = `rubric.${k}.note`, note = t(nk) !== nk ? `<div class="note">${esc(t(nk))}</div>` : "";
+    return `<div class="tiles2">${tile("purple", t("skillpage.score"), null, t("common.ai_estimate"))}${tile("blue", t("skillpage.sessions"), "0", t("common.measured"))}</div>
+      ${card(t("skillpage.rubric"), t("skillpage.rubric_sub"), `<ul class="rubric">${items}</ul>${note}`)}
+      ${card(t("skillpage.findings"), "", empty(k, nd, t("skillpage.findings_empty")))}`;
+  }
+  if (k === "settings") {
+    return card(t("settings.language"), "", `<div class="form"><label for="lang-select">${esc(t("settings.language_label"))}</label><select id="lang-select"><option value="he"${lang === "he" ? " selected" : ""}>עברית</option><option value="en"${lang === "en" ? " selected" : ""}>English</option></select></div>`)
+      + card(t("settings.gemini"), t("settings.gemini_sub"), `<div class="pill">●&nbsp; ${esc(t("gemini.not_configured"))}</div><div class="note">${esc(t("settings.gemini_pending"))}</div>`);
+  }
+  return `<section class="card">${empty(k, t(`page.${k}.empty_title`), t(`page.${k}.empty_text`))}</section>`;
+}
+
+function render() {
+  document.documentElement.lang = lang;
+  document.documentElement.dir = lang === "he" ? "rtl" : "ltr";
+  document.getElementById("banner").textContent = t("preview.banner");
+  document.getElementById("lang").textContent = t("preview.lang");
+  renderSidebar();
+  const dev = DEV[current] ? `<span class="dev" title="${esc(t("common.in_development_tip"))}">${esc(t("common.in_development", { phase: DEV[current] }))}</span>` : "";
+  const main = document.getElementById("page");
+  main.innerHTML = `<div class="head"><div><h1>${esc(t(`nav.${current}`))}</h1><p class="sub">${esc(t(`page.${current}.subtitle`))}</p></div>${dev}</div>${pageBody(current)}`;
+  main.scrollTop = 0;
+  const sel = document.getElementById("lang-select");
+  if (sel) sel.addEventListener("change", e => setLang(e.target.value));
+}
+function setLang(l) { lang = l; try { localStorage.setItem("lang", l); } catch (e) {} render(); }
+document.getElementById("sidebar").addEventListener("click", e => { const b = e.target.closest(".nav"); if (b) { current = b.dataset.k; render(); } });
+document.getElementById("lang").addEventListener("click", () => setLang(lang === "he" ? "en" : "he"));
+render();
+</script>

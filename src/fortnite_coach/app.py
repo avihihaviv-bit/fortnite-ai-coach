@@ -26,10 +26,17 @@ def create_app(argv: list[str] | None = None) -> QApplication:
 
 
 def run(argv: list[str]) -> int:
-    AppPaths.default().ensure()
+    paths = AppPaths.default().ensure()
     app = create_app(argv)
+    from fortnite_coach.db.engine import Database
+    from fortnite_coach.db.repositories.profile_repo import get_or_create_profile
     from fortnite_coach.ui.main_window import MainWindow
 
-    window = MainWindow()
+    db = Database(paths.database).init()
+    get_or_create_profile(db)
+    window = MainWindow(db, paths)
     window.show()
-    return app.exec()
+    try:
+        return app.exec()
+    finally:
+        db.close()
