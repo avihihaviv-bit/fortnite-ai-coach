@@ -32,8 +32,11 @@ def run(argv: list[str]) -> int:
     from fortnite_coach.db.repositories.profile_repo import get_or_create_profile
     from fortnite_coach.ui.main_window import MainWindow
 
+    from fortnite_coach.db.repositories.knowledge_repo import seed_builtin
+
     db = Database(paths.database).init()
     get_or_create_profile(db)
+    seed_builtin(db)
     window = MainWindow(db, paths)
     window.show()
     try:

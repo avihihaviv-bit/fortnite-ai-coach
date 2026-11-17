@@ -17,8 +17,23 @@ def _v1_initial(conn: Connection) -> None:
     Base.metadata.create_all(conn)
 
 
+def _columns(conn: Connection, table: str) -> set[str]:
+    return {row[1] for row in conn.execute(text(f"PRAGMA table_info({table})"))}
+
+
+def _v2_knowledge_keys(conn: Connection) -> None:
+    """Stable keys + Hebrew titles for knowledge entries (databases created by v1)."""
+    cols = _columns(conn, "knowledge")
+    if "key" not in cols:
+        conn.execute(text("ALTER TABLE knowledge ADD COLUMN key VARCHAR(64)"))
+    if "title_he" not in cols:
+        conn.execute(text("ALTER TABLE knowledge ADD COLUMN title_he VARCHAR(200)"))
+    conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_knowledge_key ON knowledge (key)"))
+
+
 MIGRATIONS: list[tuple[int, Callable[[Connection], None]]] = [
     (1, _v1_initial),
+    (2, _v2_knowledge_keys),
 ]
 
 LATEST_VERSION = MIGRATIONS[-1][0]

@@ -8,7 +8,7 @@ from fortnite_coach.ui.theme import Colors
 class StatTile(QFrame):
     """KPI tile. ``value=None`` renders the 'Not enough data' empty look."""
 
-    def __init__(self, accent: str = Colors.BLUE, parent: QWidget | None = None):
+    def __init__(self, accent: str = Colors.PURPLE, parent: QWidget | None = None):
         super().__init__(parent)
         self.setObjectName("Card")
         lay = QVBoxLayout(self)

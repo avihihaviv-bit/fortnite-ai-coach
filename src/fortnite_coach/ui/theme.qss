@@ -24,8 +24,8 @@ QPushButton#NavButton {
 QPushButton#NavButton[rtl="true"] { text-align: right; }
 QPushButton#NavButton:hover { background: @PANEL_HOVER; color: @TEXT; }
 QPushButton#NavButton:checked {
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 rgba(59,130,246,0.22), stop:1 rgba(139,92,246,0.10));
-    color: @TEXT; font-weight: 600;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 rgba(139,92,246,0.26), stop:1 rgba(34,197,94,0.06));
+    color: @TEXT;  /* no weight change: Qt sizes the button with the normal weight, bold would clip */
 }
 
 /* ---------- Status pill ---------- */
@@ -64,19 +64,19 @@ QPushButton {
     background: @PANEL_HOVER; border: 1px solid @BORDER; border-radius: 8px;
     padding: 8px 16px; color: @TEXT; font-weight: 600;
 }
-QPushButton:hover { border-color: @BLUE; }
+QPushButton:hover { border-color: @PURPLE; }
 QPushButton:disabled { color: @TEXT_FAINT; border-color: @BORDER; background: @PANEL; }
 QPushButton#PrimaryButton {
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 @BLUE, stop:1 @PURPLE);
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 @PURPLE, stop:1 @GREEN);
     border: none; color: white;
 }
 QPushButton#PrimaryButton:disabled { background: @PANEL_HOVER; color: @TEXT_FAINT; }
 QPushButton#DangerButton { color: @RED; }
 QLineEdit, QComboBox, QSpinBox {
     background: @PANEL_DARK; border: 1px solid @BORDER; border-radius: 8px;
-    padding: 7px 10px; color: @TEXT; selection-background-color: @BLUE;
+    padding: 7px 10px; color: @TEXT; selection-background-color: @PURPLE;
 }
-QLineEdit:focus, QComboBox:focus, QSpinBox:focus { border-color: @BLUE; }
+QLineEdit:focus, QComboBox:focus, QSpinBox:focus { border-color: @PURPLE; }
 QComboBox QAbstractItemView {
     background: @PANEL; border: 1px solid @BORDER; selection-background-color: @PANEL_HOVER;
 }
@@ -85,7 +85,7 @@ QProgressBar {
 }
 QProgressBar::chunk {
     border-radius: 5px;
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 @BLUE, stop:1 @PURPLE);
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 @PURPLE, stop:1 @GREEN);
 }
 QScrollBar:vertical { background: transparent; width: 10px; margin: 2px; }
 QScrollBar::handle:vertical { background: @BORDER; border-radius: 4px; min-height: 30px; }

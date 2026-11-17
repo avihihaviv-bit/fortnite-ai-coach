@@ -31,7 +31,7 @@ class GameplayAnalysisPage(EmptyStatePage):
     icon_name = "gameplay"
 
     def __init__(self, parent: QWidget | None = None):
-        super().__init__(parent, dev_phase=4)
+        super().__init__(parent, dev_phase=5)
 
 
 class TrainingSessionsPage(EmptyStatePage):
@@ -39,7 +39,7 @@ class TrainingSessionsPage(EmptyStatePage):
     icon_name = "training_sessions"
 
     def __init__(self, parent: QWidget | None = None):
-        super().__init__(parent, dev_phase=4)
+        super().__init__(parent, dev_phase=5)
 
 
 class TrainingPlanPage(EmptyStatePage):
@@ -47,7 +47,7 @@ class TrainingPlanPage(EmptyStatePage):
     icon_name = "training_plan"
 
     def __init__(self, parent: QWidget | None = None):
-        super().__init__(parent, dev_phase=7)
+        super().__init__(parent, dev_phase=8)
 
 
 class ProgressPage(EmptyStatePage):
@@ -55,7 +55,7 @@ class ProgressPage(EmptyStatePage):
     icon_name = "progress"
 
     def __init__(self, parent: QWidget | None = None):
-        super().__init__(parent, dev_phase=8)
+        super().__init__(parent, dev_phase=9)
 
 
 class HistoryPage(EmptyStatePage):
@@ -63,4 +63,4 @@ class HistoryPage(EmptyStatePage):
     icon_name = "history"
 
     def __init__(self, parent: QWidget | None = None):
-        super().__init__(parent, dev_phase=8)
+        super().__init__(parent, dev_phase=9)

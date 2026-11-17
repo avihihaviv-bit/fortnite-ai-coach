@@ -13,15 +13,19 @@ Under active development — see `docs/ARCHITECTURE.md` and the phase list below
 | Phase | Area | Status |
 |---|---|---|
 | 1 | Project structure & architecture | ✅ done |
-| 2 | Desktop UI (shell, 12 pages, RTL) | ✅ done |
+| 2 | Desktop UI (shell, pages, RTL) | ✅ done |
 | 3 | SQLite, settings persistence, data deletion | ✅ done |
-| 4 | Video import & processing | ⏳ |
-| 5 | Gemini integration (key optional) | ⏳ |
-| 6 | Coaching analysis pipeline | ⏳ |
-| 7 | Training plans | ⏳ |
-| 8 | Progress & history | ⏳ |
-| 9 | Cost control & security | ⏳ |
-| 10 | Tests & Windows EXE | ⏳ |
+| 4 | Fortnite taxonomy, knowledge base, Movement & Player Profile pages | ✅ done |
+| 5 | Video import + in-app recording (hotkeys, NVENC) | ⏳ |
+| 6 | Gemini integration (Free Tier only, key optional) | ⏳ |
+| 7 | Professional analysis with timestamps | ⏳ |
+| 8 | Personal coach & training plans | ⏳ |
+| 9 | Comparison, progress, history | ⏳ |
+| 10 | Knowledge updates, cost control, security, Live Coach feasibility | ⏳ |
+| 11 | Tests & Windows EXE | ⏳ |
+
+See `docs/UPGRADE_PLAN.md` for the audit and roadmap.
+
 
 ## Development
 ```bash

@@ -25,6 +25,8 @@ _PATHS: dict[str, str] = {
     "history": '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     "settings": '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3'
                 'M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>',
+    "movement": '<path d="M4 17c3 0 4-2 6-5s3-5 6-5h4"/><path d="M17 4l3 3-3 3"/><path d="M4 21h6"/>',
+    "profile": '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
     "upload": '<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>',
     "info": '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>',
     "spark": '<path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/>',

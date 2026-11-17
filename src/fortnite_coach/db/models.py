@@ -162,6 +162,8 @@ class KnowledgeEntry(Base):
 
     __tablename__ = "knowledge"
     id: Mapped[int] = mapped_column(primary_key=True)
+    key: Mapped[str | None] = mapped_column(String(64), unique=True)  # stable id for built-in packs
+    title_he: Mapped[str | None] = mapped_column(String(200))
     topic: Mapped[str] = mapped_column(String(32), index=True)  # building, weapons, meta, ...
     title: Mapped[str] = mapped_column(String(200))
     content: Mapped[str] = mapped_column(Text)

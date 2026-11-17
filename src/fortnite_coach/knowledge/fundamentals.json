@@ -1,0 +1,133 @@
+{
+  "pack_version": 1,
+  "source_name": "Fortnite AI Coach built-in fundamentals (general principles, not season-specific)",
+  "note": "Only principles that do not depend on a season. Weapon stats, items, map codes and meta must come from dated, sourced research entries.",
+  "entries": [
+    {
+      "key": "bld_protect_first",
+      "topic": "building",
+      "title": "Protect before you act",
+      "title_he": "הגנה לפני פעולה",
+      "content": "Before taking a wall, editing, or peeking, the side the opponent can shoot from should be covered (wall, floor or cone). Most lost build fights start with one open side, not with slow building."
+    },
+    {
+      "key": "bld_tunneling",
+      "topic": "building",
+      "title": "Protected tunneling",
+      "title_he": "טאנלינג מוגן",
+      "content": "A tunnel is only safe when each step closes walls on all exposed sides plus a cone or floor above. A tunnel with one missing piece gives the opponent a free shot from that gap."
+    },
+    {
+      "key": "bld_retakes",
+      "topic": "building",
+      "title": "Retakes and high ground",
+      "title_he": "ריטייקים וגובה",
+      "content": "A retake should start from cover and change rhythm or direction so it is not predictable. Repeating the same ramp-wall sequence lets an opponent with height edit and shoot or take the ramp."
+    },
+    {
+      "key": "bld_tarping",
+      "topic": "building",
+      "title": "Tarping",
+      "title_he": "טארפינג",
+      "content": "Tarping (ramp with a floor above) keeps a cover layer overhead while moving. It costs materials, so it fits rotations under fire, not open safe ground."
+    },
+    {
+      "key": "bld_materials",
+      "topic": "building",
+      "title": "Material efficiency",
+      "title_he": "יעילות בחומרים",
+      "content": "Building that does not block a real line of fire or gain a position wastes materials and time. In late game, low materials limits every option, so entering fights with few materials is a decision error."
+    },
+    {
+      "key": "edt_reset",
+      "topic": "editing",
+      "title": "Edit, act, reset",
+      "title_he": "עריכה, פעולה, איפוס",
+      "content": "An edit should end with an action (shot, movement, piece taken) and then a reset (re-place the piece or retreat) if the action did not finish the fight. Staying in an open edit is a common way to take free damage."
+    },
+    {
+      "key": "edt_crosshair",
+      "topic": "editing",
+      "title": "Crosshair ready at edit completion",
+      "title_he": "כוונת מוכנה בסיום העריכה",
+      "content": "When an edit opens, the crosshair should already be at the height and spot where the opponent will appear. Moving the crosshair after the edit opens loses the timing advantage."
+    },
+    {
+      "key": "edt_predictable",
+      "topic": "editing",
+      "title": "Avoid predictable edits",
+      "title_he": "הימנעות מעריכות צפויות",
+      "content": "Repeating the same edit shape from the same spot lets the opponent pre-aim it. Varying edit shape and timing, or faking an edit, keeps the advantage."
+    },
+    {
+      "key": "pc_principle",
+      "topic": "piece_control",
+      "title": "Piece control principle",
+      "title_he": "עקרון שליטה בחלקים",
+      "content": "Piece control means placing your piece where the opponent wants to build, so they lose options. It works when you predict their next piece (for example claiming the wall or cone next to them before they place it)."
+    },
+    {
+      "key": "pc_right_hand",
+      "topic": "piece_control",
+      "title": "Right-hand peek",
+      "title_he": "פיק לצד ימין",
+      "content": "Because the third-person camera is over the right shoulder, peeking to the right exposes less of the player's body than the opponent sees. Peeking from the left side of cover exposes more."
+    },
+    {
+      "key": "aim_crosshair",
+      "topic": "aim",
+      "title": "Crosshair placement",
+      "title_he": "מיקום כוונת",
+      "content": "Keeping the crosshair at the height and direction where an opponent will appear reduces how far you must move it when they do. This is visible on video; actual mouse accuracy, DPI and sensitivity are not."
+    },
+    {
+      "key": "aim_range",
+      "topic": "aim",
+      "title": "Weapon range",
+      "title_he": "טווח נשק",
+      "content": "Every weapon class has an effective range: shotguns close, SMGs close-to-mid, rifles mid-to-long. Exact weapon stats change between seasons and must come from a dated source."
+    },
+    {
+      "key": "mov_strafe",
+      "topic": "movement",
+      "title": "Strafing and exposure",
+      "title_he": "סטרייפינג וחשיפה",
+      "content": "A player who stands still while exposed is the easiest target. Unpredictable strafing and taking cover between shots reduces damage taken."
+    },
+    {
+      "key": "gs_rotation",
+      "topic": "game_sense",
+      "title": "Early rotation",
+      "title_he": "רוטציה מוקדמת",
+      "content": "Rotating before the zone forces you gives a choice of position and avoids fighting while also running from the storm. Late rotations usually mean worse positions or storm damage."
+    },
+    {
+      "key": "gs_third_party",
+      "topic": "game_sense",
+      "title": "Third-party risk",
+      "title_he": "סיכון צד שלישי",
+      "content": "Long fights make noise and attract other players. When nearby players are visible or heard, finishing quickly or disengaging is often better than a long build fight."
+    },
+    {
+      "key": "gs_disengage",
+      "topic": "game_sense",
+      "title": "When to disengage",
+      "title_he": "מתי להתנתק",
+      "content": "A fight should continue only while you keep an advantage (health, height, materials, position). After losing it, resetting or leaving is usually better than pushing."
+    },
+    {
+      "key": "gs_endgame",
+      "topic": "game_sense",
+      "title": "Endgame layers",
+      "title_he": "שכבות בסוף משחק",
+      "content": "In endgame, position relative to the next zone and the number of players on each layer matters more than eliminations. Exact zone mechanics can change between seasons."
+    },
+    {
+      "key": "fight_open",
+      "topic": "fight_execution",
+      "title": "Opening a fight",
+      "title_he": "פתיחת קרב",
+      "content": "A strong opening combines protection with the first damage: take the shot from cover, then follow up while the opponent is weak, or reset if they are protected."
+    }
+  ]
+}

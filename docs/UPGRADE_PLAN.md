@@ -58,3 +58,37 @@ Date: 2026-11-17 · State at the time of the audit: phases 1–3 done, 34 tests 
 - No contact with Fortnite: no memory reading, injection, overlay, automation, continuous capture, or changes to Windows/Fortnite settings.
 - No fake data, no demo features pretending to be real, no buttons that don't work.
 - Season-specific information is never shown without a source and date; outdated information is marked as not current.
+
+## 6. Audit of the new requirement: recording through the app + Live Coach (2026-11-17)
+
+### What already exists
+- The database is ready for videos (path + fingerprint, no copy), sessions, reports and mistakes in the full format (what you did / what would have been better / why / how to practice / evidence / confidence).
+- `Exercise` and `Mistake` are already structured for "a specific exercise per mistake".
+- The ffmpeg check shows that `h264_nvenc` can appear in the list **even when there's no NVIDIA card**, so a real test encode is needed before choosing it.
+
+### What has to change
+| Old requirement | New requirement | Decision |
+|---|---|---|
+| "No automatic recording" | Recording that **the user** starts/stops | Allowed: only on a click or a hotkey, never automatically. A clear indicator while recording |
+| Import only | Recording + import | Both, same pipeline |
+| — | Global hotkeys | Windows `RegisterHotKey` (a standard OS API, like OBS). No keyboard hook, no contact with the game |
+| — | NVENC | Real capability detection (test encode). Order: NVENC → AMD AMF → Intel QSV → x264 (with a warning about CPU load) |
+| — | Low CPU load | Capture with `ddagrab` (Desktop Duplication, frames stay on the GPU) + a hardware encoder. **No promise of zero FPS impact** |
+| — | Crash safety | Fragmented MP4: the file stays playable even if the recording is cut off |
+| Any model | **Free Tier only** | A paid model can't be selected; no billing toggle |
+| — | Live Coach in the future | A feasibility document only + an architecture that allows it (a separate capture-source layer). No fake button |
+
+### Known limitations (will appear in the UI and the docs)
+- Audio: ffmpeg on Windows doesn't capture system audio without a device such as "Stereo Mix". By default the recording is **video only**; audio is optional when a device is available.
+- Exclusive fullscreen: capture may not work. Windowed Fullscreen is recommended.
+- The recording itself runs while you play, so it has an FPS cost (small with NVENC, but not zero). AI analysis is blocked while Fortnite is running.
+
+### Updated phase order
+4. Fortnite knowledge + expanded evaluation criteria + Movement / Player Profile pages + colors *(now)*
+5. Video: import, metadata, segments **+ recording through the app (hotkeys, NVENC, quality, folder, indicator)**
+6. Gemini (Free Tier only)
+7. Professional analysis: timestamps, what you did / what's better / why / a specific exercise
+8. Personal coach and learning from repeated mistakes
+9. Comparisons and progress
+10. Updatable knowledge, cost, security, **Live Coach feasibility document**
+11. EXE + GitHub Actions

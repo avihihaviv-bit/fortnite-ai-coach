@@ -26,7 +26,7 @@ fortnite-ai-coach = "fortnite_coach.__main__:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-fortnite_coach = ["i18n/*.json", "ui/*.qss", "assets/icons/*.svg"]
+fortnite_coach = ["i18n/*.json", "ui/*.qss", "knowledge/*.json", "assets/icons/*.svg"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

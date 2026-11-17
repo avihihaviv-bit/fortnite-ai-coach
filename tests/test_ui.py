@@ -41,7 +41,7 @@ def window(qtbot, env):
 
 def test_startup_shows_dashboard(window):
     assert window.current_key == "dashboard"
-    assert len(NAV_KEYS) == 12
+    assert len(NAV_KEYS) == 14
 
 
 def test_every_nav_button_navigates(window, qtbot):
@@ -80,7 +80,7 @@ def test_gemini_shown_as_not_configured(window):
 
 
 def test_unfinished_pages_are_marked(window):
-    for key in ("gameplay", "training_sessions", "training_plan", "progress", "history"):
+    for key in ("gameplay", "training_sessions", "training_plan", "progress", "history"):  # still in development
         assert window.pages[key].dev_badge.isVisibleTo(window.pages[key])
     assert not window.pages["dashboard"].dev_badge.isVisibleTo(window.pages["dashboard"])
 
@@ -138,3 +138,32 @@ def test_delete_all_from_settings(window, env, monkeypatch):
     monkeypatch.setattr(page, "confirm", lambda *a: True)
     page.delete_all_btn.click()
     assert window.pages["dashboard"].stats.analyzed_sessions == 0
+
+
+def test_profile_name_saved_to_database(window, env):
+    from fortnite_coach.db.repositories import profile_repo
+
+    page = window.pages["profile"]
+    page.name_edit.setText("Avi")
+    page.save_btn.click()
+    assert profile_repo.get_or_create_profile(env[0]).display_name == "Avi"
+
+
+def test_movement_page_uses_taxonomy(window):
+    get_translator().set_language("en")
+    page = window.pages["movement"]
+    texts = [lbl.text() for lbl in page.criteria_labels]
+    assert any("Strafing" in t for t in texts)
+    assert page.mistake_labels  # tracked mistakes listed
+
+
+def test_profile_strengths_need_evidence(window, env):
+    from tests.helpers import add_test_report
+
+    get_translator().set_language("en")
+    page = window.pages["profile"]
+    assert "Not enough data" in page.strengths_body.text()
+    add_test_report(env[0], "f9", {"aim": (80, 2), "building": (40, 1)})  # TEST DATA
+    window.refresh_data()
+    assert page.strengths_body.text().startswith("Aim")
+    assert page.weak_body.text().startswith("Building")

@@ -20,7 +20,7 @@ class DashboardPage(BasePage):
         tiles = QGridLayout()
         tiles.setSpacing(16)
         self.tile_rating = StatTile(Colors.PURPLE)
-        self.tile_sessions = StatTile(Colors.BLUE)
+        self.tile_sessions = StatTile(Colors.PURPLE_LIGHT)
         self.tile_strongest = StatTile(Colors.GREEN)
         self.tile_weakest = StatTile(Colors.AMBER)
         for i, t in enumerate((self.tile_rating, self.tile_sessions, self.tile_strongest, self.tile_weakest)):

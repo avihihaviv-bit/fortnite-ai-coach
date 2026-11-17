@@ -14,9 +14,10 @@ class Colors:
     TEXT = "#E8EAF0"
     TEXT_MUTED = "#8B90A0"
     TEXT_FAINT = "#5C6170"
-    BLUE = "#3B82F6"
-    PURPLE = "#8B5CF6"
-    GREEN = "#22C55E"
+    PURPLE = "#8B5CF6"        # primary accent
+    PURPLE_LIGHT = "#A78BFA"
+    GREEN = "#22C55E"         # secondary accent / positive
+    BLUE = "#3B82F6"          # informational only
     AMBER = "#F59E0B"
     RED = "#EF4444"
 

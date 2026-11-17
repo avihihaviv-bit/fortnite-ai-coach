@@ -11,9 +11,9 @@ from fortnite_coach.ui.widgets.status_pill import StatusPill
 
 # (section i18n key, [nav keys])
 NAV_SECTIONS: list[tuple[str, list[str]]] = [
-    ("nav.section.overview", ["dashboard"]),
+    ("nav.section.overview", ["dashboard", "profile"]),
     ("nav.section.analyze", ["gameplay", "training_sessions"]),
-    ("nav.section.skills", ["building", "editing", "piece_control", "aim", "game_sense"]),
+    ("nav.section.skills", ["building", "editing", "piece_control", "aim", "movement", "game_sense"]),
     ("nav.section.improve", ["training_plan", "progress", "history"]),
     ("nav.section.app", ["settings"]),
 ]
@@ -48,7 +48,7 @@ class Sidebar(QFrame):
             for key in keys:
                 btn = QPushButton(objectName="NavButton")
                 btn.setCheckable(True)
-                btn.setIcon(icons.icon(key, Colors.TEXT_MUTED, Colors.BLUE))
+                btn.setIcon(icons.icon(key, Colors.TEXT_MUTED, Colors.PURPLE_LIGHT))
                 btn.setIconSize(QSize(18, 18))
                 btn.clicked.connect(lambda _=False, k=key: self.navigated.emit(k))
                 self.group.addButton(btn)

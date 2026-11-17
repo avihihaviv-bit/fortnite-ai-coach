@@ -6,11 +6,12 @@ from PySide6.QtWidgets import QApplication, QHBoxLayout, QMainWindow, QStackedWi
 from fortnite_coach.ai.status import GeminiStatus
 from fortnite_coach.config.paths import AppPaths
 from fortnite_coach.db.engine import Database
-from fortnite_coach.db.repositories import data_repo, session_repo, settings_repo, stats_repo
+from fortnite_coach.db.repositories import data_repo, profile_repo, session_repo, settings_repo, stats_repo
 from fortnite_coach.core.skills import SKILL_PAGES
 from fortnite_coach.i18n.translator import get_translator, tr
 from fortnite_coach.ui.pages.base import BasePage
 from fortnite_coach.ui.pages.dashboard import DashboardPage
+from fortnite_coach.ui.pages.profile_page import ProfilePage
 from fortnite_coach.ui.pages.settings_page import SettingsPage
 from fortnite_coach.ui.pages.simple_pages import (
     GameplayAnalysisPage,
@@ -45,6 +46,7 @@ class MainWindow(QMainWindow):
         self.settings_page = SettingsPage()
         self.pages: dict[str, BasePage] = {
             "dashboard": DashboardPage(),
+            "profile": ProfilePage(),
             "gameplay": GameplayAnalysisPage(),
             "training_sessions": TrainingSessionsPage(),
             **{s.value: SkillPage(s) for s in SKILL_PAGES},
@@ -58,6 +60,8 @@ class MainWindow(QMainWindow):
             self.stack.addWidget(page)
 
         self.sidebar.navigated.connect(self.navigate)
+        self.pages["profile"].name_saved.connect(self._save_profile_name)
+        self.pages["profile"].set_profile(profile_repo.get_or_create_profile(db).display_name)
         self.settings_page.language_selected.connect(self.set_language)
         self.settings_page.clear_cache_requested.connect(self._clear_cache)
         self.settings_page.delete_all_requested.connect(self._delete_all)
@@ -72,8 +76,17 @@ class MainWindow(QMainWindow):
     # ---- data -------------------------------------------------------------
     def refresh_data(self) -> None:
         """Reload everything shown from the database (called after any data change)."""
-        self.pages["dashboard"].refresh(stats_repo.dashboard_stats(self.db))
+        stats = stats_repo.dashboard_stats(self.db)
+        self.pages["dashboard"].refresh(stats)
+        self.pages["profile"].refresh(stats)
+        for skill in SKILL_PAGES:
+            self.pages[skill.value].refresh(stats)
         self.settings_page.set_data_info(session_repo.counts(self.db), str(self.paths.root))
+
+    def _save_profile_name(self, name: str) -> None:
+        profile = profile_repo.update_profile(self.db, display_name=name)
+        self.pages["profile"].set_profile(profile.display_name)
+        self.pages["profile"].show_saved()
 
     def set_language(self, language: str) -> None:
         from fortnite_coach.config.settings import Language
