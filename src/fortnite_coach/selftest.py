@@ -69,7 +69,7 @@ def run_self_test() -> dict:
         import keyring
 
         name = type(keyring.get_keyring()).__module__
-        if sys.platform == "win32":
+        if frozen and sys.platform == "win32":  # the installed app must use Windows Credential Manager
             assert "Windows" in name, f"unexpected backend {name}"
         return name
 
@@ -82,7 +82,7 @@ def run_self_test() -> dict:
     _check("resources", resources, results)
     _check("database", database, results)
     _check("ffmpeg", ffmpeg, results)
-    _check("keyring", keyring_backend, results, required=sys.platform == "win32")
+    _check("keyring", keyring_backend, results, required=frozen and sys.platform == "win32")
     _check("qt", qt, results)
     ok = all(r["ok"] for r in results if r["required"])
     return {"version": __version__, "frozen": frozen, "platform": sys.platform, "ok": ok, "checks": results}

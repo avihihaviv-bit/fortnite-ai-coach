@@ -79,7 +79,10 @@ class DashboardPage(BasePage):
         row2.setSpacing(16)
         self.weekly_card = Card()
         self.weekly_empty = EmptyState("progress")
+        self.weekly_label = QLabel()
+        self.weekly_label.setWordWrap(True)
         self.weekly_card.body.addWidget(self.weekly_empty)
+        self.weekly_card.body.addWidget(self.weekly_label)
         self.mistakes_card = Card()
         self.mistakes_empty = EmptyState("info")
         self.mistakes_list = QLabel()
@@ -101,9 +104,11 @@ class DashboardPage(BasePage):
         self.levels = None
         self.recent: list = []
         self.repeated: list = []
+        self.periods: list = []
         self.finish()
 
-    def refresh(self, stats: DashboardStats, levels=None, recent=None, repeated=None) -> None:
+    def refresh(self, stats: DashboardStats, levels=None, recent=None, repeated=None, periods=None) -> None:
+        self.periods = periods or []
         self.stats = stats
         self.levels = levels
         self.recent = recent or []
@@ -141,8 +146,29 @@ class DashboardPage(BasePage):
         self.priorities_list.setText("\n".join(prio))
         self.priorities_list.setVisible(bool(prio))
         self.priorities_empty.setVisible(not prio)
-        self.weekly_card.set_title(tr("dash.weekly"))
+        from datetime import datetime, timedelta, timezone
+
+        from fortnite_coach.db.repositories.progress_repo import _week_key
+
+        now = datetime.now(timezone.utc)
+        this_k, last_k = _week_key(now), _week_key(now - timedelta(days=7))
+        by = {p.key: p for p in self.periods}
+        self.weekly_card.set_title(tr("dash.weekly"), tr("common.measured"))
         self.weekly_empty.set_text(nd, tr("dash.weekly_empty"))
+        if this_k in by or last_k in by:
+            def col(p):
+                return (p.sessions, "—" if p.mistakes_per_min is None else f"{p.mistakes_per_min:g}", p.xp, p.completions) \
+                    if p else (0, "—", 0, 0)
+            a, b = col(by.get(this_k)), col(by.get(last_k))
+            rows = [tr("dash.week_head")]
+            for i, key in enumerate(("dash.week_sessions", "dash.week_mpm", "dash.week_xp", "dash.week_training")):
+                rows.append(f"{tr(key)}:  <b>{a[i]}</b>  ·  {b[i]}")
+            self.weekly_label.setText("<br>".join(rows))
+            self.weekly_label.setVisible(True)
+            self.weekly_empty.setVisible(False)
+        else:
+            self.weekly_label.setVisible(False)
+            self.weekly_empty.setVisible(True)
         self.mistakes_card.set_title(tr("dash.repeated_mistakes"), tr("dash.improvements_sub"))
         self.mistakes_empty.set_text(nd, tr("dash.mistakes_empty"))
         rep = [f"• {code_label(r.code, False)} · {tr('dash.seen_in', n=r.sessions)}" for r in self.repeated[:6]]

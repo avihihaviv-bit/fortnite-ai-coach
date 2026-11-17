@@ -150,3 +150,30 @@ def test_analysis_creates_plan_and_exercise_can_be_completed(setup, sample_video
     assert edit, [c.ex.template_id for c in tp.cards]  # TEST DATA mistake EDIT_EXPOSED_AFTER -> its drill
     edit[0].done_btn.click()
     assert "Done ×1" in tp.cards[[c.ex.template_id for c in tp.cards].index("edit_reset_drill")].count.text()
+
+
+def test_progress_page_after_two_analyses(setup, sample_video, tmp_path, monkeypatch):
+    import shutil
+
+    w, client, qtbot = setup
+    connect(w, qtbot)
+    from tests.fake_gemini import segment_json
+
+    client._responses = [segment_json("00:02", score=40), segment_json("00:03", score=65)]
+    second = tmp_path / "second.mp4"
+    shutil.copy(sample_video, second)
+    with open(second, "ab") as f:  # different fingerprint = a different recording
+        f.write(b"\0")
+    for video in (sample_video, second):
+        page = load(w, qtbot, video)
+        monkeypatch.setattr(page, "confirm", lambda *a: True)
+        page.analyze_btn.click()
+        qtbot.waitUntil(lambda: page.job is not None and not page.job.running, timeout=30000)
+        wait_all()
+    prog = w.pages["progress"]
+    assert len(prog.points) == 2 and prog.compare_card.isVisibleTo(prog)
+    prog.skill_combo.setCurrentIndex(prog.skill_combo.findData("editing"))
+    assert len(prog.score_chart.points) == 2 and [p[1] for p in prog.score_chart.points] == [40, 65]
+    assert "40 → 65" in prog.compare_result.text()
+    assert prog.table.rowCount() >= 1
+    assert "XP" in w.pages["dashboard"].weekly_label.text() or w.pages["dashboard"].weekly_label.isHidden() is False

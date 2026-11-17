@@ -33,6 +33,7 @@ hiddenimports = [
     "sqlalchemy.dialects.sqlite",
     "PySide6.QtNetwork",
     "PySide6.QtSvg",
+    "PySide6.QtCharts",
 ]
 
 # Never bundle Qt modules the app does not use (size + attack surface).

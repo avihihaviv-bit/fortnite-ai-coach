@@ -2,4 +2,4 @@
 
 APP_NAME = "Fortnite AI Coach"
 APP_ID = "FortniteAICoach"
-__version__ = "0.7.0"
+__version__ = "0.8.0"

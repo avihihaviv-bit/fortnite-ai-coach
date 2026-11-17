@@ -79,11 +79,10 @@ def test_gemini_shown_as_not_configured(window):
     assert not GeminiStatus.NOT_CONFIGURED.can_analyze
 
 
-def test_unfinished_pages_are_marked(window):
-    for key in ("progress",):  # still in development
-        assert window.pages[key].dev_badge.isVisibleTo(window.pages[key])
-    for key in ("dashboard", "gameplay", "training_sessions", "history", "training_plan"):
-        assert not window.pages[key].dev_badge.isVisibleTo(window.pages[key])
+def test_no_page_is_left_in_development(window):
+    # every page in the sidebar is functional now; none may show an "in development" badge
+    for key, page in window.pages.items():
+        assert not page.dev_badge.isVisibleTo(page), key
 
 
 def test_all_icons_render(qtbot):

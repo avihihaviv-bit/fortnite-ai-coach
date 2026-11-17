@@ -100,6 +100,9 @@ def test_self_test_cli_entry(tmp_path):
 
 
 def test_single_instance(qtbot):
+    """The second launch is a separate process, exactly like a real double-click."""
+    import subprocess
+
     from fortnite_coach.app import create_app
     from fortnite_coach.single_instance import SingleInstance, server_name
 
@@ -108,8 +111,14 @@ def test_single_instance(qtbot):
     first = SingleInstance(name)
     assert not first.notify_running_instance(200)  # nobody running yet
     assert first.listen()
-    with qtbot.waitSignal(first.activated, timeout=3000):
-        assert SingleInstance(name).notify_running_instance(1000)
+    code = ("import sys; from PySide6.QtCore import QCoreApplication; app = QCoreApplication([]); "
+            "from fortnite_coach.single_instance import SingleInstance; "
+            f"sys.exit(0 if SingleInstance({name!r}).notify_running_instance(3000) else 3)")
+    src = str(ROOT / "src")
+    with qtbot.waitSignal(first.activated, timeout=10000):
+        proc = subprocess.Popen([sys.executable, "-c", code], env={**__import__("os").environ, "PYTHONPATH": src})
+    qtbot.waitUntil(lambda: proc.poll() is not None, timeout=10000)
+    assert proc.returncode == 0
     first.close()
 
 

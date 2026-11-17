@@ -20,7 +20,7 @@ Under active development — see `docs/ARCHITECTURE.md` and the phase list below
 | 6 | Gemini integration (Free Tier only, connection test, limits, cache) | ✅ done (mocked; real key pending) |
 | 7 | Professional analysis with timestamps + levels/XP + History report | ✅ done (mocked; real key pending) |
 | 8 | Personal training plan (from your mistakes), completion tracking, measured training effect | ✅ done |
-| 9 | Comparison, progress, history | ⏳ |
+| 9 | Progress charts, weekly/monthly, repeated vs resolved mistakes, records, session comparison | ✅ done |
 | 10 | Knowledge updates, cost control, security, Live Coach feasibility | ⏳ |
 | 11 | Windows installer (PyInstaller + Inno Setup, CI build + self-test) | ✅ build system ready (first Windows build pending) |
 

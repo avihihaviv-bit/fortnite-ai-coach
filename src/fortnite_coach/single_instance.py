@@ -38,6 +38,9 @@ class SingleInstance(QObject):
         sock.write(b"activate")
         sock.flush()
         sock.waitForBytesWritten(timeout_ms)
+        # Wait for the running instance to acknowledge. On Windows (named pipes) closing right
+        # after writing can drop the message before the other process has read it.
+        sock.waitForReadyRead(timeout_ms)
         sock.disconnectFromServer()
         return True
 
@@ -57,6 +60,8 @@ class SingleInstance(QObject):
 
     def _read(self, conn: QLocalSocket) -> None:
         if bytes(conn.readAll()).startswith(b"activate"):
+            conn.write(b"ok")
+            conn.flush()
             self.activated.emit()
         conn.disconnectFromServer()
 
