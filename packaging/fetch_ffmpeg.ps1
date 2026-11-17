@@ -1,45 +1,62 @@
-# Download a pinned ffmpeg build for Windows into vendor\ffmpeg and verify its SHA-256.
+# Download a fixed ffmpeg build for Windows into vendor\ffmpeg and verify its SHA-256.
 #
 # Source: Gyan.dev "full" build mirrored on GitHub (GyanD/codexffmpeg). The full build includes
 # ddagrab (Desktop Duplication capture), NVENC, AMF, QSV and libx264, which the recorder needs.
 #
-# Hash verification, in order of preference:
-#   1. packaging\ffmpeg.sha256 (pinned in the repository)  <- preferred
-#   2. $env:FFMPEG_SHA256
-#   3. the SHA-256 digest GitHub publishes for the release asset
-# If none is available the script stops. After a successful run it prints the hash so it can be pinned.
+# Version + hash, in order of preference:
+#   1. packaging\ffmpeg.sha256 pinned in the repository: "<version> <sha256>"   <- preferred
+#   2. the first version from $Candidates whose GitHub release asset has a published SHA-256 digest
+#   3. otherwise the .sha256 file Gyan.dev publishes for that exact package (independent second source)
+# Nothing is ever extracted without a matching hash. The script prints the line to pin.
 param(
-    [string]$Version = "7.1.1",
+    [string[]]$Candidates = @("8.0.1", "8.0", "7.1.2", "7.1.1"),
     [string]$Dest = "$PSScriptRoot\..\vendor\ffmpeg"
 )
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
+$headers = @{ "User-Agent" = "fortnite-ai-coach-build" }
+if ($env:GITHUB_TOKEN) { $headers["Authorization"] = "Bearer $env:GITHUB_TOKEN" }
 
-$asset = "ffmpeg-$Version-full_build.zip"
-$url = "https://github.com/GyanD/codexffmpeg/releases/download/$Version/$asset"
-$tmp = Join-Path $env:TEMP $asset
-
-$pinned = ""
-$pinFile = Join-Path $PSScriptRoot "ffmpeg.sha256"
-if (Test-Path $pinFile) { $pinned = (Get-Content $pinFile -Raw).Trim().ToLower() }
-if (-not $pinned -and $env:FFMPEG_SHA256) { $pinned = $env:FFMPEG_SHA256.Trim().ToLower() }
-if (-not $pinned) {
-    Write-Host "No pinned hash; reading the digest GitHub publishes for $asset"
-    $headers = @{ "User-Agent" = "fortnite-ai-coach-build" }
-    if ($env:GITHUB_TOKEN) { $headers["Authorization"] = "Bearer $env:GITHUB_TOKEN" }
-    $rel = Invoke-RestMethod -Headers $headers "https://api.github.com/repos/GyanD/codexffmpeg/releases/tags/$Version"
-    $a = $rel.assets | Where-Object { $_.name -eq $asset }
-    if ($a -and $a.digest -like "sha256:*") { $pinned = $a.digest.Substring(7).ToLower() }
+function Get-ReleaseDigest([string]$v) {
+    try {
+        $rel = Invoke-RestMethod -Headers $headers "https://api.github.com/repos/GyanD/codexffmpeg/releases/tags/$v"
+    } catch { return $null }
+    $a = $rel.assets | Where-Object { $_.name -eq "ffmpeg-$v-full_build.zip" }
+    if (-not $a) { return $null }
+    if ($a.digest -like "sha256:*") { return $a.digest.Substring(7).ToLower() }
+    try {  # independent source: the builder's own checksum file
+        $txt = (Invoke-WebRequest -UseBasicParsing "https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-$v-full_build.zip.sha256").Content
+        $h = ([string]$txt).Trim().Split()[0].ToLower()
+        if ($h -match '^[0-9a-f]{64}$') { return $h }
+    } catch { }
+    return $null
 }
-if (-not $pinned) { throw "No SHA-256 available to verify $asset. Pin it in packaging\ffmpeg.sha256." }
 
+$version = ""; $expected = ""
+$pinFile = Join-Path $PSScriptRoot "ffmpeg.sha256"
+if (Test-Path $pinFile) {
+    $parts = (Get-Content $pinFile -Raw).Trim().Split()
+    if ($parts.Count -ge 2) { $version = $parts[0]; $expected = $parts[1].ToLower() }
+}
+if (-not $expected) {
+    foreach ($v in $Candidates) {
+        $h = Get-ReleaseDigest $v
+        Write-Host "Candidate ${v}: $(if ($h) { 'hash available' } else { 'no release or no published hash' })"
+        if ($h) { $version = $v; $expected = $h; break }
+    }
+}
+if (-not $expected) { throw "No verifiable ffmpeg build found. Pin '<version> <sha256>' in packaging\ffmpeg.sha256." }
+
+$asset = "ffmpeg-$version-full_build.zip"
+$url = "https://github.com/GyanD/codexffmpeg/releases/download/$version/$asset"
+$tmp = Join-Path $env:TEMP $asset
 Write-Host "Downloading $url"
-Invoke-WebRequest -Uri $url -OutFile $tmp
+Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $tmp
 $actual = (Get-FileHash $tmp -Algorithm SHA256).Hash.ToLower()
-if ($actual -ne $pinned) { Remove-Item $tmp; throw "SHA-256 mismatch for $asset`n expected $pinned`n actual   $actual" }
+if ($actual -ne $expected) { Remove-Item $tmp; throw "SHA-256 mismatch for $asset`n expected $expected`n actual   $actual" }
 Write-Host "SHA-256 verified: $actual"
 
-$extract = Join-Path $env:TEMP "ffmpeg-extract-$Version"
+$extract = Join-Path $env:TEMP "ffmpeg-extract-$version"
 if (Test-Path $extract) { Remove-Item $extract -Recurse -Force }
 Expand-Archive $tmp -DestinationPath $extract
 $root = Get-ChildItem $extract -Directory | Select-Object -First 1
@@ -49,5 +66,4 @@ Copy-Item (Join-Path $root.FullName "bin\ffprobe.exe") $Dest -Force
 Copy-Item (Join-Path $root.FullName "LICENSE") (Join-Path $Dest "FFMPEG_LICENSE.txt") -Force
 Remove-Item $tmp, $extract -Recurse -Force
 & (Join-Path $Dest "ffmpeg.exe") -hide_banner -version | Select-Object -First 1
-Write-Host "To pin this build, put this line in packaging\ffmpeg.sha256:"
-Write-Host $actual
+Write-Host "PIN-THIS: $version $actual"

@@ -153,4 +153,4 @@ def test_workflow_smoke_tests_built_and_installed_exe():
 def test_ffmpeg_fetch_script_verifies_hash():
     ps = (ROOT / "packaging" / "fetch_ffmpeg.ps1").read_text()
     assert "Get-FileHash" in ps and "SHA-256 mismatch" in ps
-    assert re.search(r'\$Version = "\d+\.\d+(\.\d+)?"', ps)  # pinned version, never "latest"
+    assert "Candidates" in ps and "latest" not in ps.lower()  # fixed versions only, never "latest"
