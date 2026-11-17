@@ -27,3 +27,13 @@ class GeminiStatus(str, Enum):
     @property
     def can_analyze(self) -> bool:
         return self is GeminiStatus.CONNECTED
+
+
+def current_status(has_key: bool, last_test_ok: bool | None = None) -> GeminiStatus:
+    """Status from facts only. Without a successful connection test (Phase 6) a saved
+    key is reported as untested and analysis stays disabled."""
+    if not has_key:
+        return GeminiStatus.NOT_CONFIGURED
+    if last_test_ok is None:
+        return GeminiStatus.CONFIGURED_UNTESTED
+    return GeminiStatus.CONNECTED if last_test_ok else GeminiStatus.ERROR

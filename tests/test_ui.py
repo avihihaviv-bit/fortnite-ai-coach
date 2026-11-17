@@ -80,9 +80,10 @@ def test_gemini_shown_as_not_configured(window):
 
 
 def test_unfinished_pages_are_marked(window):
-    for key in ("gameplay", "training_sessions", "training_plan", "progress", "history"):  # still in development
+    for key in ("training_plan", "progress", "history"):  # still in development
         assert window.pages[key].dev_badge.isVisibleTo(window.pages[key])
-    assert not window.pages["dashboard"].dev_badge.isVisibleTo(window.pages["dashboard"])
+    for key in ("dashboard", "gameplay", "training_sessions"):
+        assert not window.pages[key].dev_badge.isVisibleTo(window.pages[key])
 
 
 def test_all_icons_render(qtbot):

@@ -16,7 +16,7 @@ Under active development — see `docs/ARCHITECTURE.md` and the phase list below
 | 2 | Desktop UI (shell, pages, RTL) | ✅ done |
 | 3 | SQLite, settings persistence, data deletion | ✅ done |
 | 4 | Fortnite taxonomy, knowledge base, Movement & Player Profile pages | ✅ done |
-| 5 | Video import + in-app recording (hotkeys, NVENC) | ⏳ |
+| 5 | Video import + in-app recording (hotkeys, NVENC) + secure API key field | ✅ done (recording to be verified on Windows) |
 | 6 | Gemini integration (Free Tier only, key optional) | ⏳ |
 | 7 | Professional analysis with timestamps | ⏳ |
 | 8 | Personal coach & training plans | ⏳ |

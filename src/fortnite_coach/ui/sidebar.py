@@ -55,6 +55,10 @@ class Sidebar(QFrame):
                 self.buttons[key] = btn
                 lay.addWidget(btn)
         lay.addStretch(1)
+        self.rec_pill = StatusPill()
+        self.rec_pill.hide()
+        lay.addWidget(self.rec_pill)
+        lay.addSpacing(6)
         self.status = StatusPill()
         lay.addWidget(self.status)
         self._gemini = GeminiStatus.NOT_CONFIGURED
@@ -62,6 +66,12 @@ class Sidebar(QFrame):
 
     def set_current(self, key: str) -> None:
         self.buttons[key].setChecked(True)
+
+    def set_recording(self, active: bool, elapsed_s: float) -> None:
+        self.rec_pill.setVisible(active)
+        if active:
+            m, sec = divmod(int(elapsed_s), 60)
+            self.rec_pill.set_state("error", f"REC  {m:02d}:{sec:02d}", tr("rec.recording"))
 
     def set_gemini_status(self, status: GeminiStatus) -> None:
         self._gemini = status

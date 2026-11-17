@@ -1,9 +1,11 @@
 # Architecture
 
 ## Principles
-1. **Post-session only.** The app never touches Fortnite: no screen capture, no memory reading,
-   no injection, no automatic recording, no background processing. Work happens only after the user
-   picks a finished recording and clicks *Analyze*.
+1. **Post-session analysis only.** The app never touches Fortnite: no memory reading, no injection,
+   no overlay, no automation, no automatic recording, no background processing. Screen recording
+   happens only between an explicit user Start and Stop (button or hotkey), via ffmpeg screen capture
+   (like OBS). Recordings are not processed until the user loads them; AI analysis runs only when the
+   user clicks *Analyze*.
 2. **Honest data.** Scores come only from real analysis evidence. No evidence → "Not enough data".
    AI estimates and measured values are always labeled differently. No random or fake statistics.
 3. **Works without Gemini.** Every non-AI feature works with no API key. Until a key is saved and
@@ -17,7 +19,9 @@ ui/        PySide6 widgets & pages (no business logic)
 workers/   QThread workers for user-started jobs (cancellable)
 coaching/  rubrics, prompt building, scoring, mistakes, profile, training plans (pure Python)
 ai/        Gemini integration: config, key store, service, video analyzer, parser, usage, cache
-video/     validation, ffprobe metadata, OpenCV frame sampling, ffmpeg clip preparation, fingerprints
+video/     validation, ffprobe metadata, OpenCV frame sampling, segments + coverage, fingerprints
+recording/ capability detection (real test encode), ffmpeg command builder, recorder process,
+           global hotkeys (RegisterHotKey), one-shot Fortnite process check
 db/        SQLAlchemy models, migrations, repositories (SQLite)
 config/    paths and non-secret settings
 core/      enums (skills, modes, depth) and the error hierarchy

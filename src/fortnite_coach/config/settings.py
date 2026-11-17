@@ -37,6 +37,25 @@ class GeminiSettings(BaseModel):
     paid_usage_acknowledged: bool = False
 
 
+class RecordingSettings(BaseModel):
+    """User-controlled recording. Nothing is ever recorded automatically."""
+
+    output_dir: str | None = None          # None -> ~/Videos/Fortnite AI Coach
+    resolution: str = Field(default="native", pattern="^(native|1440p|1080p|720p)$")
+    fps: int = Field(default=60, ge=24, le=144)
+    quality: str = Field(default="medium", pattern="^(low|medium|high)$")
+    encoder: str = "auto"                  # auto or a detected encoder name
+    audio_device: str | None = None        # DirectShow device name; None = video only
+    monitor_index: int = Field(default=0, ge=0, le=8)
+    hotkey_start: str = "Ctrl+Shift+F9"
+    hotkey_stop: str = "Ctrl+Shift+F10"
+    hotkeys_enabled: bool = True
+
+
+class VideoSettings(BaseModel):
+    segment_seconds: int = Field(default=120, ge=30, le=600)
+
+
 class AppSettings(BaseModel):
     language: Language = Language.HEBREW
     ffmpeg_path: str | None = None
@@ -44,3 +63,5 @@ class AppSettings(BaseModel):
     confirm_before_each_request: bool = True
     gemini: GeminiSettings = Field(default_factory=GeminiSettings)
     limits: UsageLimits = Field(default_factory=UsageLimits)
+    recording: RecordingSettings = Field(default_factory=RecordingSettings)
+    video: VideoSettings = Field(default_factory=VideoSettings)

@@ -26,20 +26,8 @@ class EmptyStatePage(BasePage):
         self.empty.set_text(tr(f"page.{self.page_key}.empty_title"), tr(f"page.{self.page_key}.empty_text"))
 
 
-class GameplayAnalysisPage(EmptyStatePage):
-    page_key = "gameplay"
-    icon_name = "gameplay"
-
-    def __init__(self, parent: QWidget | None = None):
-        super().__init__(parent, dev_phase=5)
 
 
-class TrainingSessionsPage(EmptyStatePage):
-    page_key = "training_sessions"
-    icon_name = "training_sessions"
-
-    def __init__(self, parent: QWidget | None = None):
-        super().__init__(parent, dev_phase=5)
 
 
 class TrainingPlanPage(EmptyStatePage):

@@ -72,6 +72,7 @@ QPushButton#PrimaryButton {
 }
 QPushButton#PrimaryButton:disabled { background: @PANEL_HOVER; color: @TEXT_FAINT; }
 QPushButton#DangerButton { color: @RED; }
+QPushButton#DangerButton:disabled { color: @TEXT_FAINT; }
 QLineEdit, QComboBox, QSpinBox {
     background: @PANEL_DARK; border: 1px solid @BORDER; border-radius: 8px;
     padding: 7px 10px; color: @TEXT; selection-background-color: @PURPLE;
