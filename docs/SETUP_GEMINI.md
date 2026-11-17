@@ -22,9 +22,14 @@ Only AI analysis needs a key.
 | Status | Meaning |
 |---|---|
 | API key not configured | No key saved. AI analysis is off |
-| API key saved, connection not tested yet | A key is saved, but it hasn't been verified (connection test arrives in Phase 6) |
+| API key saved, connection not tested yet | A key is saved. Click **Test connection** (it only lists models; no video is sent) |
 | Gemini connected | The connection test passed |
 | Gemini connection error | The last test failed |
+
+## After saving
+1. Click **Test connection**. You should see "✓ Connected".
+2. Choose a model (Free Tier only) and a daily request limit.
+3. Load a video → **Analyze with Gemini** → check the confirmation screen (number of requests, upload size, today's usage) → Yes.
 
 ## Cost and privacy
 - **Free Tier only.** The app never turns on billing or switches to a paid model.

@@ -46,9 +46,3 @@ class ProgressPage(EmptyStatePage):
         super().__init__(parent, dev_phase=9)
 
 
-class HistoryPage(EmptyStatePage):
-    page_key = "history"
-    icon_name = "history"
-
-    def __init__(self, parent: QWidget | None = None):
-        super().__init__(parent, dev_phase=9)

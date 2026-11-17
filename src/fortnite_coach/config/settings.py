@@ -35,6 +35,11 @@ class GeminiSettings(BaseModel):
     # The user must explicitly acknowledge that their account may be billed
     # before the app sends requests to a model they marked as paid.
     paid_usage_acknowledged: bool = False
+    # Result of the last connection test (facts only; None = never tested).
+    last_test_ok: bool | None = None
+    last_test_at: str | None = None
+    last_test_error: str | None = None
+    available_models: list[str] = Field(default_factory=list)
 
 
 class RecordingSettings(BaseModel):
@@ -61,6 +66,7 @@ class AppSettings(BaseModel):
     ffmpeg_path: str | None = None
     ffprobe_path: str | None = None
     confirm_before_each_request: bool = True
+    close_to_tray: bool = True  # keep running in the tray so recording hotkeys keep working
     gemini: GeminiSettings = Field(default_factory=GeminiSettings)
     limits: UsageLimits = Field(default_factory=UsageLimits)
     recording: RecordingSettings = Field(default_factory=RecordingSettings)

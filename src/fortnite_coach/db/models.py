@@ -193,3 +193,42 @@ class Setting(Base):
     __tablename__ = "settings"
     key: Mapped[str] = mapped_column(String(64), primary_key=True)
     value: Mapped[dict] = mapped_column(JSON)
+
+
+class XpEvent(Base):
+    """XP earned from one good play the coach saw. Deleting the session removes its XP."""
+
+    __tablename__ = "xp_events"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    report_id: Mapped[int] = mapped_column(ForeignKey("reports.id", ondelete="CASCADE"), index=True)
+    skill: Mapped[str] = mapped_column(String(32), index=True)
+    code: Mapped[str] = mapped_column(String(64))
+    difficulty: Mapped[str] = mapped_column(String(16))
+    amount: Mapped[int] = mapped_column(Integer)
+    timestamp_s: Mapped[float | None] = mapped_column(Float)
+    timestamp_end_s: Mapped[float | None] = mapped_column(Float)
+    description: Mapped[str] = mapped_column(Text, default="")
+    evidence: Mapped[str] = mapped_column(Text, default="")
+    confidence: Mapped[float | None] = mapped_column(Float)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class AnalysisCache(Base):
+    """Validated AI result for one segment, so the same request is never sent twice."""
+
+    __tablename__ = "analysis_cache"
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    result_json: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class GeminiFile(Base):
+    """A video uploaded to the Gemini Files API (kept by Google ~48 h) - reused instead of re-uploading."""
+
+    __tablename__ = "gemini_files"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    proxy_key: Mapped[str] = mapped_column(String(64), unique=True)
+    name: Mapped[str] = mapped_column(String(128))
+    uri: Mapped[str] = mapped_column(Text)
+    mime_type: Mapped[str] = mapped_column(String(64))
+    uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

@@ -10,6 +10,8 @@ from fortnite_coach.ui.pages.base import BasePage
 from fortnite_coach.ui.theme import Colors
 from fortnite_coach.ui.widgets.card import Card
 from fortnite_coach.ui.widgets.empty_state import EmptyState
+from fortnite_coach.ui.widgets.finding_card import FindingCard
+from fortnite_coach.ui.widgets.level_bar import LevelBar
 from fortnite_coach.ui.widgets.stat_tile import StatTile
 
 
@@ -24,6 +26,11 @@ class SkillPage(BasePage):
         row.setSpacing(16)
         self.score_tile = StatTile(Colors.PURPLE)
         self.sessions_tile = StatTile(Colors.PURPLE_LIGHT)
+        self.level_card = Card()
+        self.level_bar = LevelBar()
+        self.level_card.body.addWidget(self.level_bar)
+        self.level_card.setMinimumWidth(320)
+        row.addWidget(self.level_card)
         row.addWidget(self.score_tile)
         row.addWidget(self.sessions_tile)
         row.addStretch(1)
@@ -62,13 +69,42 @@ class SkillPage(BasePage):
         self.findings_card = Card()
         self.findings_empty = EmptyState(skill.value)
         self.findings_card.body.addWidget(self.findings_empty)
+        self.findings_box = QWidget()
+        from PySide6.QtWidgets import QVBoxLayout
+
+        self.findings_layout = QVBoxLayout(self.findings_box)
+        self.findings_layout.setContentsMargins(0, 0, 0, 0)
+        self.findings_layout.setSpacing(8)
+        self.findings_card.body.addWidget(self.findings_box)
         self.content.addWidget(self.findings_card)
         self.stats = DashboardStats()
+        self.level = None
+        self.findings: list = []
         self.finish()
 
-    def refresh(self, stats: DashboardStats) -> None:
+    def refresh(self, stats: DashboardStats, level=None, findings=None) -> None:
         self.stats = stats
+        self.level = level
+        self.findings = findings or []
         self.retranslate()
+
+    def _render_findings(self) -> None:
+        from fortnite_coach.ui.pages.history_page import code_label
+
+        while self.findings_layout.count():
+            w = self.findings_layout.takeAt(0).widget()
+            if w:
+                w.deleteLater()
+        for f in self.findings:
+            good = f.kind == "good"
+            card = FindingCard(f.kind, code_label(f.code, good), f.timestamp_s,
+                               [(tr("report.what"), f.text),
+                                (tr("report.evidence") if good else tr("report.better"), f.detail)],
+                               badge=f"+{f.xp} XP" if good else "")
+            card.frame.hide()
+            self.findings_layout.addWidget(card)
+        self.findings_box.setVisible(bool(self.findings))
+        self.findings_empty.setVisible(not self.findings)
 
     def retranslate(self) -> None:
         super().retranslate()
@@ -91,5 +127,8 @@ class SkillPage(BasePage):
         self.mistakes_card.set_title(tr("skillpage.tracked_mistakes"), tr("skillpage.tracked_mistakes_sub"))
         for lbl, m in zip(self.mistake_labels, self.mistake_types):
             lbl.setText("–  " + taxonomy.label(m, lang))
-        self.findings_card.set_title(tr("skillpage.findings"))
+        self.findings_card.set_title(tr("skillpage.findings"), tr("skillpage.findings_sub"))
         self.findings_empty.set_text(nd, tr("skillpage.findings_empty"))
+        self.level_card.set_title(tr("skillpage.level"), tr("skillpage.level_sub"))
+        self.level_bar.set_level(self.level)
+        self._render_findings()

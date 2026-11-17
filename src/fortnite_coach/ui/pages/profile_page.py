@@ -8,6 +8,7 @@ from fortnite_coach.i18n.translator import tr
 from fortnite_coach.ui.pages.base import BasePage
 from fortnite_coach.ui.widgets.card import Card
 from fortnite_coach.ui.widgets.empty_state import EmptyState
+from fortnite_coach.ui.widgets.level_bar import LevelBar
 
 TOP_N = 3
 
@@ -52,10 +53,31 @@ class ProfilePage(BasePage):
         row.addWidget(self.weak_card)
         self.content.addLayout(row)
 
+        self.levels_card = Card()
+        from PySide6.QtWidgets import QGridLayout
+
+        lg = QGridLayout()
+        lg.setHorizontalSpacing(18)
+        self.overall_bar = LevelBar(big=True)
+        lg.addWidget(self.overall_bar, 0, 0, 1, 4)
+        self.level_bars: dict[str, tuple[QLabel, LevelBar]] = {}
+        for i, key in enumerate(("building", "editing", "piece_control", "aim", "movement", "game_sense", "fight_execution")):
+            name, bar = QLabel(objectName="StatLabel"), LevelBar()
+            lg.addWidget(name, 1 + (i // 4) * 2, i % 4)
+            lg.addWidget(bar, 2 + (i // 4) * 2, i % 4)
+            self.level_bars[key] = (name, bar)
+        self.levels_card.body.addLayout(lg)
+        self.content.addWidget(self.levels_card)
+
         self.patterns_card = Card()
         self.patterns_empty = EmptyState("profile")
+        self.patterns_list = QLabel()
+        self.patterns_list.setWordWrap(True)
         self.patterns_card.body.addWidget(self.patterns_empty)
+        self.patterns_card.body.addWidget(self.patterns_list)
         self.content.addWidget(self.patterns_card)
+        self.levels = None
+        self.repeated: list = []
         self.stats = DashboardStats()
         self._name = ""
         self.finish()
@@ -67,8 +89,10 @@ class ProfilePage(BasePage):
     def show_saved(self) -> None:
         self.saved_hint.setText(tr("profile.saved"))
 
-    def refresh(self, stats: DashboardStats) -> None:
+    def refresh(self, stats: DashboardStats, levels=None, repeated=None) -> None:
         self.stats = stats
+        self.levels = levels
+        self.repeated = repeated or []
         self.retranslate()
 
     def _skill_list(self, items: list[tuple[str, float]]) -> str:
@@ -89,5 +113,17 @@ class ProfilePage(BasePage):
         nd = tr("profile.needs_two_skills")
         self.strengths_body.setText(self._skill_list(list(reversed(rated))[:TOP_N]) if enough else nd)
         self.weak_body.setText(self._skill_list(rated[:TOP_N]) if enough else nd)
+        from fortnite_coach.ui.pages.history_page import code_label
+
+        self.levels_card.set_title(tr("profile.levels"), tr("dash.levels_sub"))
+        self.overall_bar.set_level(self.levels.overall if self.levels else None)
+        for key, (name, bar) in self.level_bars.items():
+            name.setText(tr(f"skill.{key}"))
+            bar.set_level(self.levels.skills.get(key) if self.levels else None)
         self.patterns_card.set_title(tr("profile.patterns"), tr("profile.patterns_sub"))
         self.patterns_empty.set_text(tr("common.not_enough_data"), tr("profile.patterns_empty"))
+        lines = [tr("profile.repeated_row", name=code_label(r.code, False), skill=tr(f"skill.{r.skill}"),
+                    n=r.sessions, total=r.total) for r in self.repeated]
+        self.patterns_list.setText("\n".join(lines))
+        self.patterns_list.setVisible(bool(lines))
+        self.patterns_empty.setVisible(not lines)

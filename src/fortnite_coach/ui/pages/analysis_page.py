@@ -21,6 +21,8 @@ from PySide6.QtWidgets import (
     QLabel,
     QListWidget,
     QListWidgetItem,
+    QMessageBox,
+    QProgressBar,
     QPushButton,
     QWidget,
 )
@@ -42,6 +44,7 @@ from fortnite_coach.ui.widgets.status_pill import StatusPill
 from fortnite_coach.video.importer import ImportedVideo, import_video
 from fortnite_coach.video.segments import coverage, plan_segments
 from fortnite_coach.workers.task import run_task
+from fortnite_coach.recording import process_guard
 
 
 def fmt_duration(seconds: float) -> str:
@@ -53,6 +56,7 @@ def fmt_duration(seconds: float) -> str:
 
 class AnalysisPage(BasePage):
     video_imported = Signal()
+    analysis_finished = Signal(str)  # message for the tray when the app is in the background
 
     def __init__(self, ctx: AppContext, *, training: bool, parent: QWidget | None = None):
         self.page_key = "training_sessions" if training else "gameplay"
@@ -172,12 +176,29 @@ class AnalysisPage(BasePage):
         arow = QHBoxLayout()
         self.analyze_btn = QPushButton(objectName="PrimaryButton")
         self.analyze_btn.setEnabled(False)
+        self.analyze_btn.clicked.connect(self.start_analysis)
         arow.addWidget(self.analyze_btn)
         arow.addStretch(1)
         self.setup_card.body.addLayout(arow)
         self.analyze_reason = QLabel(objectName="StatHint")
         self.analyze_reason.setWordWrap(True)
         self.setup_card.body.addWidget(self.analyze_reason)
+        # progress (visible only while a user-started analysis runs)
+        self.progress_box = QWidget()
+        pl = QHBoxLayout(self.progress_box)
+        pl.setContentsMargins(0, 0, 0, 0)
+        self.progress_label = QLabel()
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setTextVisible(False)
+        self.cancel_btn = QPushButton(objectName="DangerButton")
+        self.cancel_btn.clicked.connect(self.cancel_analysis)
+        pl.addWidget(self.progress_label, 2)
+        pl.addWidget(self.progress_bar, 3)
+        pl.addWidget(self.cancel_btn)
+        self.progress_box.hide()
+        self.setup_card.body.addWidget(self.progress_box)
+        self.job = None
+        self.job_error: str | None = None
         self.content.addWidget(self.setup_card)
 
         # --- recent videos ---
@@ -357,7 +378,103 @@ class AnalysisPage(BasePage):
             return "analysis.need_key"
         if status is not GeminiStatus.CONNECTED:
             return "analysis.need_test"
-        return "analysis.coming_phase7"  # pipeline is built in Phase 7; never simulated
+        if self.job is not None and self.job.running:
+            return "analysis.running"
+        return None
+
+    # ---------------- analysis ----------------
+    def confirm(self, title: str, text: str) -> bool:
+        """Isolated so tests can answer the dialog."""
+        return QMessageBox.question(self, title, text) == QMessageBox.StandardButton.Yes
+
+    def _video_id(self) -> int | None:
+        from fortnite_coach.db.models import Video
+
+        with self.ctx.db.session() as s:
+            v = s.scalars(select(Video).where(Video.fingerprint == self.current.fingerprint)).first()
+            return v.id if v else None
+
+    def start_analysis(self) -> None:
+        from fortnite_coach.ai import usage_tracker
+        from fortnite_coach.coaching import pipeline
+        from fortnite_coach.i18n.translator import get_translator
+        from fortnite_coach.workers.analysis_job import AnalysisJob
+
+        if self.analyze_block_reason() is not None:
+            return
+        self.job_error = None
+        if process_guard.is_fortnite_running():  # one check, on click only
+            self.job_error = "analysis.fortnite_running"
+            self.refresh_status()
+            return
+        settings = self.ctx.settings()
+        m = self.current.meta
+        req = pipeline.AnalysisRequest(
+            video_id=self._video_id(), video_path=m.path, fingerprint=self.current.fingerprint, duration_s=m.duration_s,
+            mode=self.selected_mode(), depth=self.selected_depth(), focus=self.selected_focus(),
+            language=get_translator().language)
+        plan = pipeline.plan(self.ctx.db, settings, req)
+        covered = sum(x.length_s for x in plan.segments if x.analyzed)
+        est_mb = covered * (2.5 if req.depth.value == "detailed" else 1.5) / 8
+        text = tr("analysis.confirm_text", model=settings.gemini.model, requests=plan.to_send, cached=plan.cached,
+                  minutes=fmt_duration(covered), mb=f"{est_mb:.0f}" if plan.proxy_needed else "0",
+                  used=usage_tracker.requests_today(self.ctx.db), limit=settings.limits.max_requests_per_day)
+        if not self.confirm(tr("analysis.confirm_title"), text):
+            return
+        self.job = AnalysisJob(self.ctx.db, self.ctx.paths, settings, self.ctx.gemini_service(), req)
+        self.job.progress.connect(self._on_progress)
+        self.job.finished.connect(self._on_done)
+        self.job.failed.connect(self._on_failed)
+        self.progress_box.show()
+        self._on_progress("job.checking", 0, 0)
+        self.job.start()
+        self.refresh_status()
+
+    def cancel_analysis(self) -> None:
+        if self.job is not None and self.job.running:
+            self.job.cancel()
+            self.progress_label.setText(tr("job.cancelling"))
+
+    def _on_progress(self, step: str, current: int, total: int) -> None:
+        self.progress_label.setText(tr(step, i=current, n=total))
+        if total:
+            self.progress_bar.setRange(0, total)
+            self.progress_bar.setValue(current)
+        else:
+            self.progress_bar.setRange(0, 0)  # busy indicator
+
+    def _on_done(self, outcome) -> None:
+        self.progress_box.hide()
+        lines = []
+        if outcome.reused_report:
+            lines.append(tr("result.reused"))
+        else:
+            if outcome.xp_gained:
+                lines.append(tr("result.xp", xp=outcome.xp_gained))
+            if outcome.levels_gained:
+                lines.append(tr("result.level_up", n=outcome.levels_gained))
+            if outcome.xp_skipped_duplicate:
+                lines.append(tr("result.xp_duplicate"))
+            if outcome.failed_segments:
+                lines.append(tr("result.partial", n=outcome.failed_segments))
+        banner = "   ·   ".join(lines)
+        self.refresh_status()
+        self.ctx.open_report(outcome.report_id, banner)
+        self.analysis_finished.emit(banner or tr("result.done"))
+
+    def _on_failed(self, err: Exception) -> None:
+        from fortnite_coach.core.errors import OperationCancelledError, UsageLimitExceededError
+
+        self.progress_box.hide()
+        if isinstance(err, OperationCancelledError):
+            self.job_error = "error.cancelled"
+        elif isinstance(err, UsageLimitExceededError):
+            self.job_error = "error.usage_limit_detail"
+            self._limit_params = err.params
+        else:
+            self.job_error = getattr(err, "i18n_key", "error.generic")
+        self.ctx.data_changed()
+        self.refresh_status()
 
     def _render_coverage(self) -> None:
         if self.current is None:
@@ -401,7 +518,12 @@ class AnalysisPage(BasePage):
     def refresh_status(self) -> None:
         reason = self.analyze_block_reason()
         self.analyze_btn.setEnabled(False if reason else True)
-        self.analyze_reason.setText(tr(reason) if reason else "")
+        text = tr(reason) if reason else tr("analysis.ready")
+        if self.job_error:
+            params = getattr(self, "_limit_params", {}) if self.job_error == "error.usage_limit_detail" else {}
+            text = "⚠  " + tr(self.job_error, **params) + ("\n" + text if reason else "")
+        self.analyze_reason.setText(text)
+        self.cancel_btn.setText(tr("common.cancel"))
 
     def retranslate(self) -> None:
         super().retranslate()

@@ -31,9 +31,17 @@ def _v2_knowledge_keys(conn: Connection) -> None:
     conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_knowledge_key ON knowledge (key)"))
 
 
+def _v3_analysis_tables(conn: Connection) -> None:
+    """XP events, analysis cache and uploaded-file cache (new tables only; existing data untouched)."""
+    from fortnite_coach.db.models import AnalysisCache, GeminiFile, XpEvent
+
+    Base.metadata.create_all(conn, tables=[XpEvent.__table__, AnalysisCache.__table__, GeminiFile.__table__])
+
+
 MIGRATIONS: list[tuple[int, Callable[[Connection], None]]] = [
     (1, _v1_initial),
     (2, _v2_knowledge_keys),
+    (3, _v3_analysis_tables),
 ]
 
 LATEST_VERSION = MIGRATIONS[-1][0]

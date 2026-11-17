@@ -17,6 +17,7 @@ class Card(QFrame):
         titles = QVBoxLayout()
         titles.setSpacing(2)
         self.title_label = QLabel(title, objectName="CardTitle")
+        self.title_label.setWordWrap(True)
         self.subtitle_label = QLabel(subtitle, objectName="CardSubtitle")
         self.subtitle_label.setWordWrap(True)
         titles.addWidget(self.title_label)

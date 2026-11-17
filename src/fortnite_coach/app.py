@@ -51,6 +51,7 @@ def run(argv: list[str]) -> int:
     install_excepthook(str(log_file))
     log = logging.getLogger("fortnite_coach")
     app = create_app(argv)
+    app.setQuitOnLastWindowClosed(False)  # the tray keeps the app alive; "Quit" exits
 
     from fortnite_coach.single_instance import SingleInstance
 
@@ -70,6 +71,7 @@ def run(argv: list[str]) -> int:
     get_or_create_profile(db)
     seed_builtin(db)
     window = MainWindow(db, paths)
+    window.quit_on_close = True
     instance.activated.connect(window.bring_to_front)
     window.show()
     try:

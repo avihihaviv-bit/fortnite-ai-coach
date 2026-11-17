@@ -22,3 +22,6 @@ class AppContext:
     recording: RecordingController
     key_store: KeyStore
     gemini_status: Callable[[], GeminiStatus]
+    gemini_service: Callable[[], object]   # -> GeminiService for the selected model
+    open_report: Callable[..., None]     # navigate to a report in History
+    data_changed: Callable[[], None]       # refresh everything after a DB change

@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QMessageBox,
     QPushButton,
+    QSpinBox,
     QWidget,
 )
 
@@ -31,6 +32,8 @@ class SettingsPage(BasePage):
     clear_cache_requested = Signal()
     delete_all_requested = Signal()
     key_changed = Signal()
+    test_requested = Signal()
+    gemini_settings_saved = Signal()
     recording_settings_saved = Signal()
 
     def __init__(self, ctx: AppContext, parent: QWidget | None = None):
@@ -80,6 +83,34 @@ class SettingsPage(BasePage):
         self.gemini_guide.setWordWrap(True)
         self.gemini_guide.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
         self.gemini_guide.setOpenExternalLinks(True)
+        test_row = QHBoxLayout()
+        self.test_btn = QPushButton(objectName="PrimaryButton")
+        self.test_btn.clicked.connect(self.test_requested)
+        self.test_result = QLabel()
+        self.test_result.setWordWrap(True)
+        test_row.addWidget(self.test_btn)
+        test_row.addWidget(self.test_result, 1)
+        self.gemini_card.body.addLayout(test_row)
+        gform = QFormLayout()
+        gform.setHorizontalSpacing(16)
+        self.model_label, self.limit_label, self.minutes_label = QLabel(), QLabel(), QLabel()
+        self.model_combo = QComboBox()
+        self.limit_spin = QSpinBox()
+        self.limit_spin.setRange(1, 1000)
+        self.minutes_spin = QSpinBox()
+        self.minutes_spin.setRange(1, 60)
+        gform.addRow(self.model_label, self.model_combo)
+        gform.addRow(self.limit_label, self.limit_spin)
+        gform.addRow(self.minutes_label, self.minutes_spin)
+        self.gemini_card.body.addLayout(gform)
+        grow = QHBoxLayout()
+        self.gemini_save_btn = QPushButton()
+        self.gemini_save_btn.clicked.connect(self._save_gemini)
+        self.usage_label = QLabel(objectName="StatHint")
+        grow.addWidget(self.gemini_save_btn)
+        grow.addWidget(self.usage_label, 1)
+        self.gemini_card.body.addLayout(grow)
+        self.testing = False
         for w in (self.key_feedback, self.gemini_info, self.gemini_guide):
             self.gemini_card.body.addWidget(w)
         self.content.addWidget(self.gemini_card)
@@ -198,6 +229,27 @@ class SettingsPage(BasePage):
     def set_gemini_status(self, status: GeminiStatus) -> None:
         self._render_gemini(status)
 
+    def set_testing(self, testing: bool) -> None:
+        self.testing = testing
+        self._render_gemini()
+
+    def _save_gemini(self) -> None:
+        settings = self.ctx.settings()
+        g = settings.gemini.model_copy()
+        model = self.model_combo.currentData()
+        if model and model != g.model:
+            g.model = model
+            g.last_test_ok = None  # a different model must be tested again
+        settings.gemini = g
+        lim = settings.limits.model_copy()
+        lim.max_requests_per_day = self.limit_spin.value()
+        lim.max_video_seconds = self.minutes_spin.value() * 60
+        settings.limits = lim
+        self.ctx.save_settings(settings)
+        self._key_msg = ("settings.gemini_saved", "ok")
+        self.gemini_settings_saved.emit()
+        self._render_gemini()
+
     def _render_gemini(self, status: GeminiStatus | None = None) -> None:
         status = status or self.ctx.gemini_status()
         self.gemini_card.set_title(tr("settings.gemini"), tr("settings.gemini_sub"))
@@ -220,6 +272,34 @@ class SettingsPage(BasePage):
         info.append(tr("apikey.free_tier"))
         self.gemini_info.setText("\n".join(info))
         self.gemini_guide.setText(tr("apikey.guide"))
+        from fortnite_coach.ai import usage_tracker
+        from fortnite_coach.ai.gemini_config import ALLOWED_MODELS
+
+        g = self.ctx.settings().gemini
+        lim = self.ctx.settings().limits
+        self.test_btn.setText(tr("apikey.testing") if self.testing else tr("apikey.test"))
+        self.test_btn.setEnabled(bool(stored) and not self.testing)
+        if g.last_test_at:
+            res = tr("apikey.test_ok", at=g.last_test_at.replace("T", " ")[:16]) if g.last_test_ok else \
+                "⚠  " + tr(g.last_test_error or "gemini.error")
+        else:
+            res = tr("apikey.test_never")
+        self.test_result.setText(res)
+        self.model_label.setText(tr("settings.model"))
+        self.limit_label.setText(tr("settings.daily_limit"))
+        self.minutes_label.setText(tr("settings.max_minutes"))
+        self.model_combo.blockSignals(True)
+        self.model_combo.clear()
+        for m in ALLOWED_MODELS:
+            avail = (not g.available_models) or m in g.available_models
+            self.model_combo.addItem(m + ("" if avail else "  " + tr("settings.model_unavailable")), m)
+        self.model_combo.setCurrentIndex(max(0, self.model_combo.findData(g.model)))
+        self.model_combo.blockSignals(False)
+        self.limit_spin.setValue(lim.max_requests_per_day)
+        self.minutes_spin.setValue(max(1, lim.max_video_seconds // 60))
+        self.gemini_save_btn.setText(tr("common.save"))
+        self.usage_label.setText(tr("settings.usage_today", used=usage_tracker.requests_today(self.ctx.db),
+                                    limit=lim.max_requests_per_day, tokens=usage_tracker.tokens_today(self.ctx.db)))
 
     # ================= recording =================
     def _choose_folder(self) -> None:

@@ -183,5 +183,53 @@ def mistakes_for(skill: Skill) -> tuple[MistakeType, ...]:
     return tuple(m for m in MISTAKES if m.skill is skill)
 
 
-def label(item: Criterion | MistakeType, language: str) -> str:
+def label(item, language: str) -> str:
     return item.he if language == "he" else item.en
+
+
+# ---------------------------------------------------------------------------
+# Good plays: positive moments that earn XP (levels). Same evidence rules as mistakes.
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class GoodPlayType:
+    code: str
+    skill: Skill
+    en: str
+    he: str
+
+
+def _g(code: str, skill: Skill, en: str, he: str) -> GoodPlayType:
+    return GoodPlayType(code, skill, en, he)
+
+
+GOOD_PLAYS: tuple[GoodPlayType, ...] = (
+    _g("BUILD_PROTECTED_RETAKE", _B, "Protected retake that gained height", "ריטייק מוגן שהשיג גובה"),
+    _g("BUILD_CLEAN_TUNNEL", _B, "Clean protected tunnel with no gaps", "טאנל מוגן ונקי בלי פתחים"),
+    _g("BUILD_PRESSURE_DEFENSE", _B, "Fast structured defense under pressure", "הגנה מהירה ומסודרת תחת לחץ"),
+    _g("BUILD_EFFICIENT_MATS", _B, "Efficient building that saved materials", "בנייה יעילה שחסכה חומרים"),
+    _g("EDIT_HARD_FAST", _E, "Fast hard edit (double/triple/quad) into a clean action", "עריכה קשה ומהירה (כפולה/משולשת/מרובעת) שהובילה לפעולה נקייה"),
+    _g("EDIT_SHOT_HIT", _E, "Edit-and-shoot that landed damage", "עריכה וירייה שפגעה"),
+    _g("EDIT_RESET_CLEAN", _E, "Clean edit reset that avoided damage", "איפוס עריכה נקי שמנע נזק"),
+    _g("EDIT_MOVING", _E, "Accurate edit while moving", "עריכה מדויקת בתנועה"),
+    _g("PC_WALL_TAKE_CONVERT", _P, "Took a wall/piece and converted it into damage", "לקחת קיר/חלק והפכת אותו לנזק"),
+    _g("PC_TRAP_OPPONENT", _P, "Closed the opponent's escape routes", "סגרת ליריב את נתיבי הבריחה"),
+    _g("PC_RIGHT_HAND_PEEK", _P, "Safe right-hand peek that landed a shot", "פיק בטוח לצד ימין שפגע"),
+    _g("AIM_FLICK_HIT", _A, "Flick shot that hit", "פליק שפגע"),
+    _g("AIM_TRACKING_DAMAGE", _A, "Sustained tracking with visible damage", "מעקב רציף עם נזק נראה"),
+    _g("AIM_PREAIM_READY", _A, "Pre-aimed the right spot before the opponent appeared", "כיוון מראש למקום הנכון לפני שהיריב הופיע"),
+    _g("MOVE_DODGE_PEEK", _M, "Movement that dodged shots while peeking", "תנועה שהתחמקה מיריות בזמן פיק"),
+    _g("MOVE_EFFICIENT", _M, "Efficient movement that saved time or exposure", "תנועה יעילה שחסכה זמן או חשיפה"),
+    _g("GS_SMART_ROTATION", _G, "Smart early rotation to a strong position", "רוטציה מוקדמת וחכמה למיקום חזק"),
+    _g("GS_GOOD_DISENGAGE", _G, "Disengaged at the right moment", "התנתקות ברגע הנכון"),
+    _g("GS_THIRD_PARTY_AVOIDED", _G, "Avoided or punished a third party", "נמנעת מצד שלישי או ניצלת אותו"),
+    _g("GS_GOOD_FIGHT_PICK", _G, "Took a fight with a clear advantage", "בחרת קרב עם יתרון ברור"),
+    _g("GS_ENDGAME_POSITION", _G, "Strong endgame position or layer", "מיקום או שכבה חזקים בסוף המשחק"),
+    _g("FIGHT_CLEAN_FINISH", _F, "Finished the fight cleanly after the first damage", "סגרת את הקרב בצורה נקייה אחרי הנזק הראשון"),
+    _g("FIGHT_SMART_RESET", _F, "Reset and healed safely before re-engaging", "התאפסת וריפאת בבטחה לפני חזרה לקרב"),
+)
+
+GOOD_PLAYS_BY_CODE: dict[str, GoodPlayType] = {g.code: g for g in GOOD_PLAYS}
+
+
+def good_plays_for(skill: Skill) -> tuple[GoodPlayType, ...]:
+    return tuple(g for g in GOOD_PLAYS if g.skill is skill)
