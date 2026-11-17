@@ -22,14 +22,18 @@ Under active development — see `docs/ARCHITECTURE.md` and the phase list below
 | 8 | Personal coach & training plans | ⏳ |
 | 9 | Comparison, progress, history | ⏳ |
 | 10 | Knowledge updates, cost control, security, Live Coach feasibility | ⏳ |
-| 11 | Tests & Windows EXE | ⏳ |
+| 11 | Windows installer (PyInstaller + Inno Setup, CI build + self-test) | ✅ build system ready (first Windows build pending) |
 
 See `docs/UPGRADE_PLAN.md` for the audit and roadmap.
 
+
+## Install (Windows)
+Download `FortniteAICoach-Setup-<version>.exe` and run it. See `docs/INSTALL.md`.
 
 ## Development
 ```bash
 pip install -r requirements-dev.txt
 python -m pytest
 ```
+Build the installer locally with `build_exe.bat` (Python 3.12 + Inno Setup 6), or let GitHub Actions build it.
 The Gemini API key is never stored in files — it is entered in *Settings* and kept in Windows Credential Manager.

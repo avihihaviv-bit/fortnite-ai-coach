@@ -127,6 +127,14 @@ class MainWindow(QMainWindow):
         title = tr("app.title")
         self.setWindowTitle(f"● REC  {title}" if rec.is_recording else title)
 
+    def bring_to_front(self) -> None:
+        """Called when the user launches the app a second time."""
+        if self.isMinimized():
+            self.showNormal()
+        self.show()
+        self.raise_()
+        self.activateWindow()
+
     def closeEvent(self, event) -> None:
         if self.recording.is_recording:
             self.recording.stop()  # finalize the file instead of leaving ffmpeg orphaned

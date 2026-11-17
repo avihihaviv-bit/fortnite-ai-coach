@@ -1,0 +1,19 @@
+Fortnite AI Coach - third-party software
+========================================
+
+Fortnite AI Coach is an independent personal project. It is not affiliated with,
+endorsed by or sponsored by Epic Games. "Fortnite" is a trademark of Epic Games, Inc.
+
+This installation includes the following third-party components:
+
+FFmpeg (ffmpeg.exe, ffprobe.exe in the "ffmpeg" folder)
+  Build: Gyan.dev "full" build. Licensed under the GNU GPL v3 (see ffmpeg\FFMPEG_LICENSE.txt).
+  The app runs FFmpeg as a separate program. Source code: https://ffmpeg.org/download.html
+  Build source and configuration: https://www.gyan.dev/ffmpeg/builds/ and https://github.com/GyanD/codexffmpeg
+
+Qt 6 / PySide6 (Qt for Python)
+  Licensed under the GNU LGPL v3. The Qt libraries are shipped as separate, replaceable DLL files.
+  Source code: https://code.qt.io and https://download.qt.io/official_releases/QtForPython/
+
+Python runtime (PSF License), SQLAlchemy (MIT), pydantic (MIT), keyring (MIT),
+OpenCV / opencv-python-headless (Apache 2.0), NumPy (BSD), google-genai (Apache 2.0).

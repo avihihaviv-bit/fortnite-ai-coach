@@ -1,0 +1,97 @@
+name: Build Windows installer
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write   # only used to attach the installer to a GitHub Release on v* tags
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+
+      - name: Download and verify ffmpeg
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./packaging/fetch_ffmpeg.ps1
+
+      - name: Run tests
+        shell: pwsh
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          $env:PATH = "$PWD\vendor\ffmpeg;$env:PATH"
+          python -m pytest -q
+
+      - name: Build app (PyInstaller)
+        run: python -m PyInstaller packaging/fortnite_coach.spec --noconfirm
+
+      - name: Self-test the built EXE
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath dist\FortniteAICoach\FortniteAICoach.exe -ArgumentList "--self-test","--out","dist\selftest.json" -Wait -PassThru
+          Get-Content dist\selftest.json
+          if ($p.ExitCode -ne 0) { throw "Self-test failed with exit code $($p.ExitCode)" }
+
+      - name: Read version
+        id: ver
+        shell: pwsh
+        run: |
+          $v = python -c "import sys; sys.path.insert(0, 'src'); import fortnite_coach; print(fortnite_coach.__version__)"
+          "version=$v" >> $env:GITHUB_OUTPUT
+
+      - name: Build installer (Inno Setup)
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress; }
+          & $iscc /DAppVersion=${{ steps.ver.outputs.version }} packaging\installer.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed" }
+
+      - name: Install silently, self-test the installed app, uninstall
+        shell: pwsh
+        run: |
+          $setup = "dist\installer\FortniteAICoach-Setup-${{ steps.ver.outputs.version }}.exe"
+          Start-Process $setup -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/CURRENTUSER" -Wait
+          $exe = "$env:LOCALAPPDATA\Programs\Fortnite AI Coach\FortniteAICoach.exe"
+          if (-not (Test-Path $exe)) { throw "Installed EXE not found at $exe" }
+          $p = Start-Process $exe -ArgumentList "--self-test","--out","$PWD\dist\installed-selftest.json" -Wait -PassThru
+          Get-Content dist\installed-selftest.json
+          if ($p.ExitCode -ne 0) { throw "Installed self-test failed" }
+          $uninst = "$env:LOCALAPPDATA\Programs\Fortnite AI Coach\unins000.exe"
+          Start-Process $uninst -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" -Wait
+          Start-Sleep -Seconds 3
+          if (Test-Path $exe) { throw "Uninstall left the EXE behind" }
+          Write-Host "Install / self-test / uninstall OK"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FortniteAICoach-Setup-${{ steps.ver.outputs.version }}
+          path: |
+            dist/installer/*.exe
+            dist/selftest.json
+            dist/installed-selftest.json
+
+      - name: Attach installer to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/installer/*.exe

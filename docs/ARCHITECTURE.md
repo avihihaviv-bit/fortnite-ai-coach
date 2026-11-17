@@ -43,6 +43,12 @@ Dependencies point downward only: `ui → workers → coaching/ai/video → db �
 `%APPDATA%\FortniteAICoach\` — `coach.db` (SQLite), `cache\` (derived frames/clips, deletable), `logs\`.
 Original videos are referenced by path, never copied. The API key lives only in Windows Credential Manager.
 
-## Windows EXE
-Built with PyInstaller **on Windows** (locally with `build_exe.bat` or via GitHub Actions `windows-latest`).
-PyInstaller cannot cross-compile from Linux.
+## Windows installer (no Electron)
+The app is a native PySide6 desktop app, so it is packaged as-is:
+PyInstaller **onedir** (`packaging/fortnite_coach.spec`) → Inno Setup (`packaging/installer.iss`) →
+`FortniteAICoach-Setup-<version>.exe` (per-user, no admin, Hebrew/English, keeps user data on uninstall).
+ffmpeg is bundled from a pinned, SHA-256-verified build (`packaging/fetch_ffmpeg.ps1`).
+Built **on Windows** only (PyInstaller cannot cross-compile): GitHub Actions `windows-latest` runs tests,
+builds, runs `--self-test` on the built EXE, installs silently, self-tests the installed app and uninstalls;
+or locally with `build_exe.bat`. Runtime extras for the frozen app: rotating log with secret redaction,
+crash dialog, single-instance guard, `--self-test` diagnostics.
