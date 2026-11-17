@@ -66,8 +66,10 @@ class LineChart(QChartView):
         else:
             top = max(v for _, v, _ in points)
             y.setRange(0, max(1.0, top * 1.15))
+            y.applyNiceNumbers()  # round tick values (0, 25, 50 ...)
         y.setLabelFormat(y_label_fmt)
-        y.setTickCount(5)
+        if self.y_range:
+            y.setTickCount(5)
         for ax in (x, y):
             ax.setLabelsColor(QColor(Colors.TEXT_MUTED))
             ax.setGridLineColor(QColor(Colors.BORDER))
