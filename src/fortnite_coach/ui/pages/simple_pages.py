@@ -30,12 +30,6 @@ class EmptyStatePage(BasePage):
 
 
 
-class TrainingPlanPage(EmptyStatePage):
-    page_key = "training_plan"
-    icon_name = "training_plan"
-
-    def __init__(self, parent: QWidget | None = None):
-        super().__init__(parent, dev_phase=8)
 
 
 class ProgressPage(EmptyStatePage):

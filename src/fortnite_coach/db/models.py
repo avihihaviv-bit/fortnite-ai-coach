@@ -141,8 +141,9 @@ class Exercise(Base):
     map_type: Mapped[str] = mapped_column(String(64), default="")
     map_code: Mapped[str | None] = mapped_column(String(32))
     map_code_source: Mapped[str | None] = mapped_column(Text)
-    reason: Mapped[str] = mapped_column(Text)
+    reason: Mapped[str] = mapped_column(Text)  # JSON: why this exercise was chosen (rendered bilingual)
     source_mistake_codes: Mapped[list] = mapped_column(JSON, default=list)
+    template_id: Mapped[str | None] = mapped_column(String(64))
     order: Mapped[int] = mapped_column(Integer, default=0)
     completions: Mapped[list["ExerciseCompletion"]] = relationship(cascade="all, delete-orphan", passive_deletes=True)
 

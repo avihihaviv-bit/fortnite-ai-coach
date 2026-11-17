@@ -211,6 +211,9 @@ def run_analysis(
         outcome.xp_skipped_duplicate = not award and bool(agg.xp)
         outcome.xp_gained = sum(x.amount for x in agg.xp) if award else 0
         outcome.levels_gained = level_from_xp(before + outcome.xp_gained).level - level_from_xp(before).level
+        from fortnite_coach.coaching.training_plan import generate_plan
+
+        generate_plan(db)  # the plan always follows the latest evidence
         return outcome
     except OperationCancelledError:
         session_repo.set_status(db, session_id, SessionStatus.CANCELLED)

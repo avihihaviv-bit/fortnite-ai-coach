@@ -133,3 +133,20 @@ def test_tray_controls_recording_and_close_keeps_running(setup):
         assert w.isHidden() and not w._quitting  # still alive in the tray
         tray.open_requested.emit()
         assert w.isVisible()
+
+
+def test_analysis_creates_plan_and_exercise_can_be_completed(setup, sample_video, monkeypatch):
+    w, client, qtbot = setup
+    connect(w, qtbot)
+    page = load(w, qtbot, sample_video)
+    monkeypatch.setattr(page, "confirm", lambda *a: True)
+    page.analyze_btn.click()
+    qtbot.waitUntil(lambda: page.job is not None and not page.job.running, timeout=30000)
+    wait_all()
+    tp = w.pages["training_plan"]
+    assert tp.plan is not None and len(tp.cards) >= 2
+    assert tp.cards[0].ex.template_id == "warmup_mechanics"
+    edit = [c for c in tp.cards if c.ex.template_id == "edit_reset_drill"]
+    assert edit, [c.ex.template_id for c in tp.cards]  # TEST DATA mistake EDIT_EXPOSED_AFTER -> its drill
+    edit[0].done_btn.click()
+    assert "Done ×1" in tp.cards[[c.ex.template_id for c in tp.cards].index("edit_reset_drill")].count.text()

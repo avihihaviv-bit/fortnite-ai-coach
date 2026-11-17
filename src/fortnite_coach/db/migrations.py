@@ -38,10 +38,16 @@ def _v3_analysis_tables(conn: Connection) -> None:
     Base.metadata.create_all(conn, tables=[XpEvent.__table__, AnalysisCache.__table__, GeminiFile.__table__])
 
 
+def _v4_exercise_template(conn: Connection) -> None:
+    if "template_id" not in _columns(conn, "exercises"):
+        conn.execute(text("ALTER TABLE exercises ADD COLUMN template_id VARCHAR(64)"))
+
+
 MIGRATIONS: list[tuple[int, Callable[[Connection], None]]] = [
     (1, _v1_initial),
     (2, _v2_knowledge_keys),
     (3, _v3_analysis_tables),
+    (4, _v4_exercise_template),
 ]
 
 LATEST_VERSION = MIGRATIONS[-1][0]

@@ -20,7 +20,8 @@ from fortnite_coach.ui.pages.dashboard import DashboardPage
 from fortnite_coach.ui.pages.profile_page import ProfilePage
 from fortnite_coach.ui.pages.settings_page import SettingsPage
 from fortnite_coach.ui.pages.history_page import HistoryPage
-from fortnite_coach.ui.pages.simple_pages import ProgressPage, TrainingPlanPage
+from fortnite_coach.ui.pages.simple_pages import ProgressPage
+from fortnite_coach.ui.pages.training_plan_page import TrainingPlanPage
 from fortnite_coach.ui.pages.skill_page import SkillPage
 from fortnite_coach.ui.sidebar import NAV_KEYS, Sidebar
 
@@ -62,7 +63,7 @@ class MainWindow(QMainWindow):
             "gameplay": AnalysisPage(self.ctx, training=False),
             "training_sessions": AnalysisPage(self.ctx, training=True),
             **{s.value: SkillPage(s) for s in SKILL_PAGES},
-            "training_plan": TrainingPlanPage(),
+            "training_plan": TrainingPlanPage(self.ctx),
             "progress": ProgressPage(),
             "history": HistoryPage(self.ctx),
             "settings": self.settings_page,
@@ -236,6 +237,7 @@ class MainWindow(QMainWindow):
             self.pages[skill.value].refresh(stats, lv.skills.get(skill.value),
                                             report_repo.findings_for_skill(self.db, skill.value))
         self.pages["history"].refresh()
+        self.pages["training_plan"].reload()
         self.settings_page.set_data_info(session_repo.counts(self.db), str(self.paths.root))
 
     def _save_profile_name(self, name: str) -> None:

@@ -120,3 +120,6 @@ QProgressBar#XpBar::chunk { border-radius: 4px; background: qlineargradient(x1:0
 QListWidget { background: @PANEL_DARK; border: 1px solid @BORDER; border-radius: 10px; padding: 4px; }
 QListWidget::item { padding: 8px; border-radius: 6px; }
 QListWidget::item:selected { background: @PANEL_HOVER; color: @TEXT; }
+
+#ExerciseCard { background: @PANEL; border: 1px solid @BORDER; border-radius: 14px; }
+#ReasonBox { background: rgba(139,92,246,0.10); border-radius: 8px; padding: 8px 10px; color: #DDD6FE; }

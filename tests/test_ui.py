@@ -80,9 +80,9 @@ def test_gemini_shown_as_not_configured(window):
 
 
 def test_unfinished_pages_are_marked(window):
-    for key in ("training_plan", "progress"):  # still in development
+    for key in ("progress",):  # still in development
         assert window.pages[key].dev_badge.isVisibleTo(window.pages[key])
-    for key in ("dashboard", "gameplay", "training_sessions", "history"):
+    for key in ("dashboard", "gameplay", "training_sessions", "history", "training_plan"):
         assert not window.pages[key].dev_badge.isVisibleTo(window.pages[key])
 
 
