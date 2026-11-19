@@ -151,7 +151,9 @@ def run_analysis(
             uploaded = _upload(db, service, proxy, out.name, cancel)
 
         knowledge = [(e.title, e.content) for e in knowledge_repo.current_entries(db) if e.kind == "fundamental"]
-        system = system_instruction(req.mode, req.focus, req.language, knowledge)
+        season = [(e.title, e.content, f"{e.retrieved_at:%Y-%m-%d}", e.source_name or "")
+                  for e in knowledge_repo.season_facts(db)]
+        system = system_instruction(req.mode, req.focus, req.language, knowledge, season)
         parsed: list[ParsedSegment] = []
         raw: list[dict] = []
         coverage: list[dict] = []

@@ -6,7 +6,9 @@
 - No administrator rights needed. The app installs only for your user.
 
 ## Installing
-1. Download `FortniteAICoach-Setup-<version>.exe`, either from the repo's **Releases** page or from the **Actions** page (latest build, under Artifacts).
+1. Download `FortniteAICoach-Setup-<version>.exe`:
+   - **Releases** in the repo (a permanent page), or
+   - **Actions** → the latest run with ✓ → scroll down → **Artifacts** → download and unzip.
 2. Run the file.
 3. **"Windows protected your PC" warning:** this appears because the installer isn't signed with a paid code-signing certificate. Click **More info**, then **Run anyway**.
 4. Pick a language, choose whether you want a desktop shortcut, and click Install.
@@ -40,3 +42,12 @@ To delete them too, delete the folder `%APPDATA%\FortniteAICoach` and the `Fortn
 ## Building the installer yourself
 - **Automatically:** every push to GitHub builds the installer in GitHub Actions on a Windows machine. The build runs the tests, builds, self-tests the EXE, installs it, self-tests again, and uninstalls.
 - **On your computer:** install Python 3.12 and Inno Setup 6, then double-click `build_exe.bat`.
+
+## Checklist after installation
+1. The app opens from the Start Menu, in Hebrew, with the dark design.
+2. Settings → About → **Run health check** → "✓ Everything required works".
+3. Settings → Recording → **Check hardware** → working encoders are listed (NVENC on an NVIDIA card).
+4. Record 20 seconds with `Ctrl+Shift+F9` / `Ctrl+Shift+F10` → "Load this recording" → video details appear.
+5. Settings → Gemini AI → paste the key → Save → Test connection → "✓ Connected".
+6. Analyze a short recording → a report opens in History.
+7. Close and reopen the app → everything is still there.

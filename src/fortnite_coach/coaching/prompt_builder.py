@@ -12,7 +12,9 @@ def fmt_ts(seconds: float) -> str:
     return f"{s // 60:02d}:{s % 60:02d}"
 
 
-def system_instruction(mode: GameMode, focus: list[str], language: str, knowledge: list[tuple[str, str]]) -> str:
+def system_instruction(mode: GameMode, focus: list[str], language: str, knowledge: list[tuple[str, str]],
+                       season: list[tuple[str, str, str, str]] | None = None) -> str:
+    """season: [(title, content, as_of 'YYYY-MM-DD', source)] - only fresh, sourced facts."""
     lang = "Hebrew" if language == "he" else "English"
     focus_names = ", ".join(focus) or "all skills"
     lines = [
@@ -44,6 +46,9 @@ def system_instruction(mode: GameMode, focus: list[str], language: str, knowledg
     if knowledge:
         lines += ["", "COACHING FUNDAMENTALS (season-independent):"]
         lines += [f"- {title}: {content}" for title, content in knowledge]
+    if season:
+        lines += ["", "CURRENT SEASON NOTES (researched with sources; use only if clearly relevant to what you see):"]
+        lines += [f"- {title}: {content} (as of {as_of}, source: {src})" for title, content, as_of, src in season]
     return "\n".join(lines)
 
 

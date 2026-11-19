@@ -72,3 +72,31 @@ def current_entries(db: Database, topic: str | None = None) -> list[KnowledgeEnt
         if topic:
             q = q.where(KnowledgeEntry.topic == topic)
         return list(s.scalars(q))
+
+
+FRESH_DAYS = 60
+
+
+def season_facts(db: Database, now: datetime | None = None) -> list[KnowledgeEntry]:
+    """Current, sourced season facts retrieved within FRESH_DAYS. Older ones never reach the coach."""
+    from datetime import timedelta, timezone
+
+    now = now or datetime.now(timezone.utc)
+    out = []
+    for e in current_entries(db):
+        if e.kind != "season_specific" or e.retrieved_at is None:
+            continue
+        at = e.retrieved_at if e.retrieved_at.tzinfo else e.retrieved_at.replace(tzinfo=timezone.utc)
+        if now - at <= timedelta(days=FRESH_DAYS):
+            out.append(e)
+    return out
+
+
+def is_stale(e: KnowledgeEntry, now: datetime | None = None) -> bool:
+    from datetime import timedelta, timezone
+
+    if e.retrieved_at is None:
+        return False
+    now = now or datetime.now(timezone.utc)
+    at = e.retrieved_at if e.retrieved_at.tzinfo else e.retrieved_at.replace(tzinfo=timezone.utc)
+    return now - at > timedelta(days=FRESH_DAYS)

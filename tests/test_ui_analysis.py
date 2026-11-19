@@ -177,3 +177,18 @@ def test_progress_page_after_two_analyses(setup, sample_video, tmp_path, monkeyp
     assert "40 → 65" in prog.compare_result.text()
     assert prog.table.rowCount() >= 1
     assert "XP" in w.pages["dashboard"].weekly_label.text() or w.pages["dashboard"].weekly_label.isHidden() is False
+
+
+def test_settings_usage_knowledge_about_cards(setup, monkeypatch):
+    w, client, qtbot = setup
+    sp = w.settings_page
+    assert not sp.knowledge_card.update_btn.isEnabled()  # no key -> no knowledge request possible
+    assert "Needs a connected Gemini key" in sp.knowledge_card.feedback_label.text()
+    assert "18 built-in fundamentals" in sp.knowledge_card.summary.text() or "built-in" in sp.knowledge_card.summary.text()
+    connect(w, qtbot)
+    assert sp.knowledge_card.update_btn.isEnabled()
+    assert "Today: 0 of" in sp.usage_card.limit_label.text()
+    assert "Live Coach" in sp.about_card.privacy.text() and "not available" in sp.about_card.privacy.text()
+    sp.about_card.selftest_btn.click()
+    qtbot.waitUntil(lambda: not sp.about_card.running, timeout=30000)
+    assert "Everything required works" in sp.about_card.result.text()

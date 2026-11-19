@@ -16,6 +16,11 @@ for pattern in DATA_PATTERNS:
     for f in sorted(PKG.glob(pattern)):
         datas.append((str(f), str(Path("fortnite_coach") / f.parent.relative_to(PKG))))
 
+# User-facing documents opened from Settings -> About (privacy, Live Coach study, install, setup).
+for doc in ("PRIVACY.md", "LIVE_COACH.md", "INSTALL.md", "SETUP_GEMINI.md", "RECORDING.md"):
+    if (ROOT / "docs" / doc).is_file():
+        datas.append((str(ROOT / "docs" / doc), "docs"))
+
 # Bundled ffmpeg/ffprobe -> <bundle>/ffmpeg/ (matches video.ffmpeg_tools._bundled_dir).
 binaries = []
 ffmpeg_dir = ROOT / "vendor" / "ffmpeg"

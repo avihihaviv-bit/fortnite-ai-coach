@@ -1,6 +1,7 @@
-PySide6>=6.7
-SQLAlchemy>=2.0
-pydantic>=2.6
-google-genai>=1.0
-keyring>=25
-opencv-python-headless>=4.9
+# Upper bounds stop a future major release from changing behavior without a test run.
+PySide6>=6.7,<7
+SQLAlchemy>=2.0,<3
+pydantic>=2.6,<3
+google-genai>=1.0,<4
+keyring>=25,<26
+opencv-python-headless>=4.9,<6

@@ -26,3 +26,18 @@ def put(db: Database, key: str, result_json: str) -> None:
             s.add(AnalysisCache(key=key, result_json=result_json))
         else:
             row.result_json = result_json
+
+
+def clear(db: Database) -> int:
+    """Forget cached AI results (the next analysis of the same video will send requests again)."""
+    from sqlalchemy import delete
+
+    with db.session() as s:
+        return s.execute(delete(AnalysisCache)).rowcount or 0
+
+
+def count(db: Database) -> int:
+    from sqlalchemy import func, select
+
+    with db.session() as s:
+        return s.scalar(select(func.count()).select_from(AnalysisCache)) or 0

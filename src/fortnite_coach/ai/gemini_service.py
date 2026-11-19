@@ -161,6 +161,14 @@ class GeminiService:
             raise GeminiError(f"file state {self._state(f)}", i18n_key="gemini.err_processing")
         return UploadedFile(name=f.name, uri=f.uri, mime_type=getattr(f, "mime_type", None) or mime_type)
 
+    def delete_file(self, name: str) -> bool:
+        try:
+            self.client.files.delete(name=name)
+            return True
+        except Exception as exc:
+            log.warning("Could not delete uploaded file (%s)", classify(exc).i18n_key)
+            return False
+
     def file_is_active(self, name: str) -> bool:
         try:
             return self._state(self.client.files.get(name=name)) == "ACTIVE"

@@ -92,3 +92,7 @@ Date: 2026-11-17 · State at the time of the audit: phases 1–3 done, 34 tests 
 9. Comparisons and progress
 10. Updatable knowledge, cost, security, **Live Coach feasibility document**
 11. EXE + GitHub Actions
+
+## 7. Final status (version 1.0.0, 2026-11-19)
+All phases 1–10 are done, plus a Windows installer that's built and tested automatically on GitHub Actions (tests, EXE self-test, silent install, self-test of the installed app, uninstall).
+What remains to verify only on the user's computer: recording during Fortnite with NVENC, and analysis of a real game with a real key.

@@ -158,6 +158,7 @@ class MainWindow(QMainWindow):
     def refresh_gemini_status(self) -> None:
         self.set_gemini_status(self.gemini_status())
         self.settings_page.set_gemini_status(self.gemini_status())
+        self.settings_page.refresh_cards()
         for key in ("gameplay", "training_sessions"):
             self.pages[key].refresh_status()
 
@@ -243,6 +244,7 @@ class MainWindow(QMainWindow):
         self.pages["training_plan"].reload()
         self.pages["progress"].reload()
         self.settings_page.set_data_info(session_repo.counts(self.db), str(self.paths.root))
+        self.settings_page.refresh_cards()
 
     def _save_profile_name(self, name: str) -> None:
         profile = profile_repo.update_profile(self.db, display_name=name)
@@ -269,9 +271,28 @@ class MainWindow(QMainWindow):
         self.settings_page.show_data_feedback(tr("settings.cache_cleared", mb=f"{freed / 1_048_576:.1f}"))
 
     def _delete_all(self) -> None:
-        data_repo.delete_all_analysis_data(self.db)
-        self.refresh_data()
-        self.settings_page.show_data_feedback(tr("settings.data_deleted"))
+        """Delete local analysis data; when connected, also ask Google to delete uploaded videos first."""
+        from fortnite_coach.workers.task import run_task
+
+        names = data_repo.uploaded_file_names(self.db)
+
+        def finish_local(remote: tuple[int, int] | None) -> None:
+            data_repo.delete_all_analysis_data(self.db)
+            self.refresh_data()
+            msg = tr("settings.data_deleted")
+            if remote is not None:
+                msg += " " + tr("settings.remote_deleted", ok=remote[0], failed=remote[1])
+            elif names:
+                msg += " " + tr("settings.remote_expire")
+            self.settings_page.show_data_feedback(msg)
+
+        if names and self.gemini_status() is GeminiStatus.CONNECTED:
+            service = self.make_gemini_service()
+            self.settings_page.show_data_feedback(tr("common.loading"))
+            run_task(lambda: data_repo.delete_uploaded_files(self.db, service), finish_local,
+                     lambda _e: finish_local(None))
+        else:
+            finish_local(None)
 
     @property
     def current_key(self) -> str:

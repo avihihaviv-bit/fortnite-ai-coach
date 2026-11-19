@@ -9,7 +9,10 @@ from sqlalchemy import delete
 
 from fortnite_coach.db.engine import Database
 from fortnite_coach.db.models import (
+    AnalysisCache,
     ApiUsage,
+    GeminiFile,
+    XpEvent,
     Exercise,
     ExerciseCompletion,
     Mistake,
@@ -26,7 +29,8 @@ def delete_all_analysis_data(db: Database) -> None:
     Keeps settings, the player profile and the knowledge base. Never touches the
     user's video files (only their database references)."""
     with db.session() as s:
-        for model in (ExerciseCompletion, Exercise, TrainingPlan, Mistake, SkillScore, Report, Session, Video, ApiUsage):
+        for model in (ExerciseCompletion, Exercise, TrainingPlan, XpEvent, Mistake, SkillScore, Report, Session, Video,
+                      ApiUsage, AnalysisCache, GeminiFile):
             s.execute(delete(model))
 
 
@@ -44,3 +48,25 @@ def clear_cache(cache_dir: Path) -> int:
         else:
             child.unlink(missing_ok=True)
     return freed
+
+
+def uploaded_file_names(db: Database) -> list[str]:
+    from sqlalchemy import select
+
+    with db.session() as s:
+        return [n for (n,) in s.execute(select(GeminiFile.name))]
+
+
+def delete_uploaded_files(db: Database, service) -> tuple[int, int]:
+    """Ask Google to delete videos this app uploaded (they expire after ~48 h anyway). Returns (deleted, failed)."""
+    from sqlalchemy import delete
+
+    ok = failed = 0
+    for name in uploaded_file_names(db):
+        if service.delete_file(name):
+            ok += 1
+            with db.session() as s:
+                s.execute(delete(GeminiFile).where(GeminiFile.name == name))
+        else:
+            failed += 1
+    return ok, failed

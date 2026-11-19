@@ -193,8 +193,19 @@ class SettingsPage(BasePage):
         self.delete_all_btn.clicked.connect(self._on_delete_all)
         self._counts = {"videos": 0, "sessions": 0, "reports": 0}
         self._data_dir = ""
+        from fortnite_coach.ui.pages.settings_cards import AboutCard, KnowledgeCard, UsageCard
+
+        self.usage_card = UsageCard(ctx)
+        self.knowledge_card = KnowledgeCard(ctx)
+        self.about_card = AboutCard(ctx)
+        for c in (self.usage_card, self.knowledge_card, self.about_card):
+            self.content.addWidget(c)
         self._load_recording_fields()
         self.finish()
+
+    def refresh_cards(self) -> None:
+        for c in (self.usage_card, self.knowledge_card, self.about_card):
+            c.render()
 
     # ================= Gemini key =================
     def _toggle_show(self, shown: bool) -> None:
@@ -439,3 +450,5 @@ class SettingsPage(BasePage):
         self.clear_cache_btn.setToolTip(tr("settings.clear_cache_tip"))
         self.delete_all_btn.setToolTip(tr("settings.delete_all_tip"))
         self._render_data()
+        if hasattr(self, "about_card"):
+            self.refresh_cards()
