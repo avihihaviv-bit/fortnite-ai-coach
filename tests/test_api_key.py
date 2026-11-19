@@ -10,9 +10,17 @@ FAKE_KEY = "AIza" + "T" * 35  # TEST DATA: not a real key
 
 def test_format_validation():
     assert validate_key_format(f"  {FAKE_KEY}\n") == FAKE_KEY
-    for bad in ("", "   ", "short", "has space inside the key value!!", "x" * 300):
+    for bad in ("", "   ", "short", "has!bad#chars$in*the%key&value", "x" * 400):
         with pytest.raises(KeyStoreError):
             validate_key_format(bad)
+
+
+def test_copy_paste_noise_is_cleaned():
+    for noisy in (f'"{FAKE_KEY}"', f"API key: {FAKE_KEY}", f"{FAKE_KEY[:20]}\n{FAKE_KEY[20:]}", f" {FAKE_KEY} \u200b",
+                  f"\u201c{FAKE_KEY}\u201d"):
+        assert validate_key_format(noisy) == FAKE_KEY, repr(noisy)
+    newer_format = "AQ." + "Ab8RN6" * 8  # TEST DATA: a dotted key format must not be rejected locally
+    assert validate_key_format(newer_format) == newer_format
 
 
 def test_save_load_delete(memory_keyring):

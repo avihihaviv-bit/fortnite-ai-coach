@@ -22,7 +22,10 @@ USERNAME = "gemini_api_key"
 
 # Gemini keys are currently 39 chars starting with "AIza". We only reject input that
 # clearly cannot be a key; whether it really works is decided by the connection test.
-_ALLOWED = re.compile(r"^[A-Za-z0-9_\-]+$")
+# Lenient on purpose: Google may change the key format (e.g. dots in newer keys). Whether a key
+# really works is decided by the connection test, not by this check.
+_ALLOWED = re.compile(r"^[A-Za-z0-9_\-.~+/=:]+$")
+_LABEL = re.compile(r"^(?:gemini[_ ]?)?api[_ ]?key\s*[:=]\s*", re.IGNORECASE)
 
 
 class KeyStoreError(Exception):
@@ -34,9 +37,13 @@ class KeyStoreError(Exception):
 def validate_key_format(key: str) -> str:
     """Return the cleaned key or raise KeyStoreError with an i18n key."""
     k = (key or "").strip()
+    k = _LABEL.sub("", k)                       # "API key: AIza..." -> "AIza..."
+    k = k.strip().strip("\"'`“”‘’<>")  # surrounding quotes from copying
+    k = re.sub(r"\s+", "", k)                   # spaces / line breaks added by copy-paste
+    k = k.replace("\u200b", "").replace("\ufeff", "")  # invisible characters
     if not k:
         raise KeyStoreError("apikey.err_empty")
-    if not _ALLOWED.match(k) or not (20 <= len(k) <= 200):
+    if not _ALLOWED.match(k) or not (20 <= len(k) <= 300):
         raise KeyStoreError("apikey.err_format")
     return k
 

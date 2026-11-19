@@ -165,7 +165,7 @@
   "apikey.saved_unusual": "Key saved, but it does not look like a usual Gemini key (normally 39 characters starting with AIza). The connection test will tell if it works.",
   "apikey.deleted": "Key deleted.",
   "apikey.err_empty": "Paste a key first.",
-  "apikey.err_format": "This does not look like an API key (letters, digits, - and _ only, 20–200 characters).",
+  "apikey.err_format": "This does not look like an API key. Copy it again from aistudio.google.com/apikey (use the copy icon) and paste only the key.",
   "apikey.err_no_backend": "Secure storage (Windows Credential Manager) is not available, so the key was NOT saved. It is never stored as plain text.",
   "apikey.err_save": "The key could not be saved to secure storage.",
   "apikey.where": "Stored only in Windows Credential Manager. Never in files, the database or logs.",
