@@ -30,6 +30,7 @@ class RecordingController(QObject):
         self.caps: Capabilities | None = None
         self.caps_error: str | None = None
         self.detecting = False
+        self.hotkey_errors: list[str] = []  # combinations Windows refused (used by another program)
         self._source_override = source_override  # "test" in automated tests only
         self._timer = QTimer(self)
         self._timer.setInterval(500)

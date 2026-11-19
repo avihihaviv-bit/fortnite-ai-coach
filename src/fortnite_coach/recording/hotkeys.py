@@ -64,7 +64,7 @@ if sys.platform == "win32":  # pragma: no cover - exercised only on Windows
             self.callbacks = callbacks
 
         def nativeEventFilter(self, event_type, message):
-            if event_type in (b"windows_generic_MSG", "windows_generic_MSG"):
+            if bytes(event_type) == b"windows_generic_MSG":
                 msg = wintypes.MSG.from_address(int(message))
                 if msg.message == WM_HOTKEY and msg.wParam in self.callbacks:
                     self.callbacks[msg.wParam]()
@@ -76,8 +76,11 @@ class HotkeyManager:
     """Registers app-wide hotkeys. register() returns False if Windows refused
     (e.g. the combination is already used by another program)."""
 
-    def __init__(self, app) -> None:
+    def __init__(self, app, hwnd_provider=None) -> None:
         self.app = app
+        # Bind hotkeys to the main window handle: WM_HOTKEY is then delivered through that window's
+        # message queue, which Qt passes to native event filters (also while hidden in the tray).
+        self._hwnd = hwnd_provider
         self._callbacks: dict[int, Callable[[], None]] = {}
         self._next_id = 1
         self._filter = None
@@ -87,7 +90,8 @@ class HotkeyManager:
             return False
         mods, vk = parse_hotkey(text)
         hk_id = self._next_id
-        if not _user32.RegisterHotKey(None, hk_id, mods | MOD_NOREPEAT, vk):  # pragma: no cover
+        hwnd = self._hwnd() if self._hwnd else None
+        if not _user32.RegisterHotKey(hwnd, hk_id, mods | MOD_NOREPEAT, vk):  # pragma: no cover
             return False
         self._next_id += 1  # pragma: no cover
         self._callbacks[hk_id] = callback  # pragma: no cover
@@ -98,6 +102,7 @@ class HotkeyManager:
 
     def unregister_all(self) -> None:
         if is_supported():  # pragma: no cover
+            hwnd = self._hwnd() if self._hwnd else None
             for hk_id in list(self._callbacks):
-                _user32.UnregisterHotKey(None, hk_id)
+                _user32.UnregisterHotKey(hwnd, hk_id)
         self._callbacks.clear()

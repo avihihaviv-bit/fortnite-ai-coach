@@ -40,6 +40,7 @@ class GeminiSettings(BaseModel):
     last_test_at: str | None = None
     last_test_error: str | None = None
     available_models: list[str] = Field(default_factory=list)
+    model_user_chosen: bool = False  # True once the user picks a model; then it is never auto-replaced
 
 
 class RecordingSettings(BaseModel):
@@ -66,6 +67,7 @@ class AppSettings(BaseModel):
     ffmpeg_path: str | None = None
     ffprobe_path: str | None = None
     confirm_before_each_request: bool = True
+    hardware_checked: bool = False  # onboarding: the user ran "Check hardware" successfully at least once
     close_to_tray: bool = True  # keep running in the tray so recording hotkeys keep working
     gemini: GeminiSettings = Field(default_factory=GeminiSettings)
     limits: UsageLimits = Field(default_factory=UsageLimits)

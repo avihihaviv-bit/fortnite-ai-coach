@@ -6,10 +6,13 @@ from dataclasses import dataclass
 
 from fortnite_coach.core.game_modes import AnalysisDepth
 
-# Models the user may select. All have a free tier on the Gemini API (availability per key
-# is verified by the connection test; the app never switches to another model on its own).
+# Known Flash models (used before the first connection test). Google retires models over time,
+# so the connection test also discovers newer Flash models that the user's key can use.
+# Only Flash-class models are ever offered: they have a Gemini API free tier. Pro models never are.
 ALLOWED_MODELS: tuple[str, ...] = ("gemini-2.5-flash", "gemini-2.5-flash-lite")
 DEFAULT_MODEL = ALLOWED_MODELS[0]
+
+_EXCLUDE = ("tts", "image", "live", "audio", "embedding", "native", "thinking", "learnlm", "-exp", "computer")
 PROMPT_VERSION = "1"
 
 
@@ -27,5 +30,25 @@ DEPTH_PROFILES: dict[AnalysisDepth, DepthProfile] = {
 }
 
 
+def is_flash_candidate(name: str) -> bool:
+    n = name.lower()
+    return n.startswith("gemini-") and "flash" in n and "pro" not in n and not any(x in n for x in _EXCLUDE)
+
+
+def _rank(name: str) -> tuple:
+    import re
+
+    m = re.match(r"gemini-(\d+(?:\.\d+)?)", name)
+    version = float(m.group(1)) if m else 0.0
+    stable = "preview" not in name
+    full = "lite" not in name
+    return (stable, version, full, -len(name))
+
+
+def usable_models(names) -> list[str]:
+    """Flash models available for this key, best first: stable > preview, newer > older, full > lite."""
+    return sorted({n for n in names if is_flash_candidate(n)}, key=_rank, reverse=True)
+
+
 def is_allowed(model: str) -> bool:
-    return model in ALLOWED_MODELS
+    return model in ALLOWED_MODELS or is_flash_candidate(model)

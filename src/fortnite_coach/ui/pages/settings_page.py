@@ -66,15 +66,22 @@ class SettingsPage(BasePage):
         self.show_key_btn = QPushButton()
         self.show_key_btn.setCheckable(True)
         self.show_key_btn.toggled.connect(self._toggle_show)
+        self.paste_key_btn = QPushButton()
+        self.paste_key_btn.clicked.connect(self._paste_key)
         self.save_key_btn = QPushButton(objectName="PrimaryButton")
         self.save_key_btn.clicked.connect(self._save_key)
         self.delete_key_btn = QPushButton(objectName="DangerButton")
         self.delete_key_btn.clicked.connect(self._delete_key)
         key_row.addWidget(self.key_edit, 1)
+        key_row.addWidget(self.paste_key_btn)
         key_row.addWidget(self.show_key_btn)
         key_row.addWidget(self.save_key_btn)
         key_row.addWidget(self.delete_key_btn)
         self.gemini_card.body.addLayout(key_row)
+        # live hint while typing/pasting: length + format, never the key itself
+        self.key_hint = QLabel(objectName="StatHint")
+        self.key_edit.textChanged.connect(self._update_key_hint)
+        self.gemini_card.body.addWidget(self.key_hint)
         self.key_feedback = QLabel()
         self.key_feedback.setWordWrap(True)
         self.gemini_info = QLabel(objectName="StatHint")
@@ -212,6 +219,34 @@ class SettingsPage(BasePage):
         self.key_edit.setEchoMode(QLineEdit.EchoMode.Normal if shown else QLineEdit.EchoMode.Password)
         self.show_key_btn.setText(tr("apikey.hide") if shown else tr("apikey.show"))
 
+    def _paste_key(self) -> None:
+        from PySide6.QtWidgets import QApplication
+
+        text = QApplication.clipboard().text() or ""
+        try:
+            from fortnite_coach.ai.key_store import validate_key_format
+
+            text = validate_key_format(text)  # cleans quotes/spaces/labels the same way Save does
+        except KeyStoreError:
+            text = text.strip()
+        self.key_edit.setText(text)
+
+    def _update_key_hint(self, text: str) -> None:
+        from fortnite_coach.ai.key_store import validate_key_format
+
+        if not text.strip():
+            self.key_hint.setText("")
+            return
+        try:
+            clean = validate_key_format(text)
+        except KeyStoreError:
+            self.key_hint.setText("⚠  " + tr("apikey.hint_bad", n=len(text.strip())))
+            return
+        if looks_like_gemini_key(clean):
+            self.key_hint.setText("✓  " + tr("apikey.hint_good"))
+        else:
+            self.key_hint.setText(tr("apikey.hint_unusual", n=len(clean), start=clean[:4]))
+
     def _save_key(self) -> None:
         try:
             self.ctx.key_store.save(self.key_edit.text())
@@ -250,6 +285,7 @@ class SettingsPage(BasePage):
         model = self.model_combo.currentData()
         if model and model != g.model:
             g.model = model
+            g.model_user_chosen = True
             g.last_test_ok = None  # a different model must be tested again
         settings.gemini = g
         lim = settings.limits.model_copy()
@@ -270,6 +306,8 @@ class SettingsPage(BasePage):
                                          else tr("apikey.placeholder"))
         self.show_key_btn.setText(tr("apikey.hide") if self.show_key_btn.isChecked() else tr("apikey.show"))
         self.save_key_btn.setText(tr("common.save"))
+        self.paste_key_btn.setText(tr("apikey.paste"))
+        self.paste_key_btn.setToolTip(tr("apikey.paste_tip"))
         self.delete_key_btn.setText(tr("apikey.delete"))
         self.delete_key_btn.setEnabled(bool(stored))
         if self._key_msg:
@@ -293,6 +331,8 @@ class SettingsPage(BasePage):
         if g.last_test_at:
             res = tr("apikey.test_ok", at=g.last_test_at.replace("T", " ")[:16]) if g.last_test_ok else \
                 "⚠  " + tr(g.last_test_error or "gemini.error")
+            if g.last_test_ok and getattr(self, "model_picked_notice", None):
+                res += "  " + tr("apikey.model_picked", model=self.model_picked_notice)
         else:
             res = tr("apikey.test_never")
         self.test_result.setText(res)
@@ -301,7 +341,10 @@ class SettingsPage(BasePage):
         self.minutes_label.setText(tr("settings.max_minutes"))
         self.model_combo.blockSignals(True)
         self.model_combo.clear()
-        for m in ALLOWED_MODELS:
+        options = list(g.available_models) or list(ALLOWED_MODELS)
+        if g.model not in options:
+            options.insert(0, g.model)
+        for m in options:
             avail = (not g.available_models) or m in g.available_models
             self.model_combo.addItem(m + ("" if avail else "  " + tr("settings.model_unavailable")), m)
         self.model_combo.setCurrentIndex(max(0, self.model_combo.findData(g.model)))

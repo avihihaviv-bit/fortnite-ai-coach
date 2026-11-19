@@ -192,3 +192,37 @@ def test_settings_usage_knowledge_about_cards(setup, monkeypatch):
     sp.about_card.selftest_btn.click()
     qtbot.waitUntil(lambda: not sp.about_card.running, timeout=30000)
     assert "Everything required works" in sp.about_card.result.text()
+
+
+def test_onboarding_checklist_follows_real_state(setup, sample_video, monkeypatch):
+    w, client, qtbot = setup
+    ob = w.onboarding
+    assert ob.isVisibleTo(w.pages["dashboard"]) and not any(ob.done.values())
+    assert "0/6" in ob.title_label.text()
+    connect(w, qtbot)
+    assert ob.done["key"] and ob.done["test"] and not ob.done["video"]
+    load(w, qtbot, sample_video)
+    assert ob.done["video"]
+    ob.rows["exercise"][2].click()  # "Go" opens the right page
+    assert w.current_key == "training_plan"
+
+
+def test_key_paste_button_and_live_hint(setup):
+    from PySide6.QtWidgets import QApplication
+
+    w, client, qtbot = setup
+    sp = w.settings_page
+    QApplication.clipboard().setText(f'  "{FAKE_KEY}"\n')  # TEST DATA with copy noise
+    sp.paste_key_btn.click()
+    assert sp.key_edit.text() == FAKE_KEY
+    assert "Looks like a Gemini key" in sp.key_hint.text()
+    assert FAKE_KEY not in sp.key_hint.text()  # the hint never shows the key
+    sp.key_edit.setText("hello world!!! not a key at all #")
+    assert "characters" in sp.key_hint.text()
+
+
+def test_help_page_uses_configured_hotkeys(setup):
+    w, client, qtbot = setup
+    w.navigate("help")
+    texts = " ".join(body.text() for _, body, _ in w.pages["help"].cards)
+    assert "Ctrl+Shift+F9" in texts and "Windowed Fullscreen" in texts and "aistudio.google.com" in texts

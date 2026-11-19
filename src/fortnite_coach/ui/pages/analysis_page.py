@@ -280,6 +280,8 @@ class AnalysisPage(BasePage):
                     lines.append(tr("rec.video_only"))
         if hotkeys_supported() and rec.hotkeys_enabled:
             lines.append(tr("rec.hotkeys", start=rec.hotkey_start, stop=rec.hotkey_stop))
+            if rc.hotkey_errors:
+                lines.append("⚠  " + tr("rec.hotkey_taken", keys=", ".join(rc.hotkey_errors)))
         elif not hotkeys_supported():
             lines.append(tr("rec.hotkeys_windows_only"))
         lines.append(tr("rec.fps_note"))

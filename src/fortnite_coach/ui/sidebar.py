@@ -15,7 +15,7 @@ NAV_SECTIONS: list[tuple[str, list[str]]] = [
     ("nav.section.analyze", ["gameplay", "training_sessions"]),
     ("nav.section.skills", ["building", "editing", "piece_control", "aim", "movement", "game_sense"]),
     ("nav.section.improve", ["training_plan", "progress", "history"]),
-    ("nav.section.app", ["settings"]),
+    ("nav.section.app", ["help", "settings"]),
 ]
 NAV_KEYS: list[str] = [k for _, keys in NAV_SECTIONS for k in keys]
 

@@ -41,7 +41,7 @@ def window(qtbot, env):
 
 def test_startup_shows_dashboard(window):
     assert window.current_key == "dashboard"
-    assert len(NAV_KEYS) == 14
+    assert len(NAV_KEYS) == 15
 
 
 def test_every_nav_button_navigates(window, qtbot):

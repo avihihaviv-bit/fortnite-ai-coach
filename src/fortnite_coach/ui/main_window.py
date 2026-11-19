@@ -19,6 +19,7 @@ from fortnite_coach.ui.pages.base import BasePage
 from fortnite_coach.ui.pages.dashboard import DashboardPage
 from fortnite_coach.ui.pages.profile_page import ProfilePage
 from fortnite_coach.ui.pages.settings_page import SettingsPage
+from fortnite_coach.ui.pages.help_page import HelpPage
 from fortnite_coach.ui.pages.history_page import HistoryPage
 from fortnite_coach.ui.pages.progress_page import ProgressPage
 from fortnite_coach.ui.pages.training_plan_page import TrainingPlanPage
@@ -41,7 +42,7 @@ class MainWindow(QMainWindow):
             recording=self.recording, key_store=self.key_store, gemini_status=self.gemini_status,
             gemini_service=self.make_gemini_service, open_report=self.open_report, data_changed=self.refresh_data,
         )
-        self.hotkeys = HotkeyManager(QApplication.instance())
+        self.hotkeys = HotkeyManager(QApplication.instance(), lambda: int(self.winId()))
         self.hotkey_errors: list[str] = []
         self.setMinimumSize(1100, 700)
         self.resize(1360, 860)
@@ -66,11 +67,16 @@ class MainWindow(QMainWindow):
             "training_plan": TrainingPlanPage(self.ctx),
             "progress": ProgressPage(self.ctx),
             "history": HistoryPage(self.ctx),
+            "help": HelpPage(self.ctx),
             "settings": self.settings_page,
         }
         assert list(self.pages) == NAV_KEYS, "page order must match the sidebar"
         for page in self.pages.values():
             self.stack.addWidget(page)
+        from fortnite_coach.ui.widgets.onboarding import OnboardingCard
+
+        self.onboarding = OnboardingCard(self.ctx, self.navigate)
+        self.pages["dashboard"].content.insertWidget(1, self.onboarding)
 
         self.sidebar.navigated.connect(self.navigate)
         self.pages["profile"].name_saved.connect(self._save_profile_name)
@@ -84,6 +90,7 @@ class MainWindow(QMainWindow):
         self.settings_page.recording_settings_saved.connect(self.register_hotkeys)
         for key in ("gameplay", "training_sessions"):
             self.pages[key].video_imported.connect(self.refresh_data)
+        self.recording.capabilities_ready.connect(self._on_capabilities)
         self.recording.state_changed.connect(lambda _s: self._render_recording_indicator())
         self.recording.tick.connect(lambda _t: self._render_recording_indicator())
         self.register_hotkeys()
@@ -142,6 +149,9 @@ class MainWindow(QMainWindow):
             g.last_test_ok, g.last_test_at, g.last_test_error = result.ok, result.tested_at, result.error_key
             if result.available_models:
                 g.available_models = result.available_models
+            if result.picked_model:
+                g.model = result.picked_model
+                self.settings_page.model_picked_notice = result.picked_model
             self.settings.gemini = g
             self._save_settings(self.settings)
             usage_tracker.record(self.db, model=g.model, kind="connection_test", success=result.ok,
@@ -153,12 +163,15 @@ class MainWindow(QMainWindow):
             self.settings_page.set_testing(False)
             self.refresh_gemini_status()
 
-        run_task(lambda: test_connection(service), done, failed)
+        may_pick = not self.settings.gemini.model_user_chosen
+        run_task(lambda: test_connection(service, may_pick=may_pick), done, failed)
 
     def refresh_gemini_status(self) -> None:
         self.set_gemini_status(self.gemini_status())
         self.settings_page.set_gemini_status(self.gemini_status())
         self.settings_page.refresh_cards()
+        if hasattr(self, "onboarding"):
+            self.onboarding.render()
         for key in ("gameplay", "training_sessions"):
             self.pages[key].refresh_status()
 
@@ -179,6 +192,13 @@ class MainWindow(QMainWindow):
                     self.hotkey_errors.append(combo)
             except HotkeyError:
                 self.hotkey_errors.append(combo)
+        self.recording.hotkey_errors = list(self.hotkey_errors)
+
+    def _on_capabilities(self, caps) -> None:
+        if caps is not None and not self.settings.hardware_checked:
+            self.settings.hardware_checked = True
+            self._save_settings(self.settings)
+            self.refresh_data()
 
     def _render_recording_indicator(self) -> None:
         rec = self.recording
@@ -245,6 +265,8 @@ class MainWindow(QMainWindow):
         self.pages["progress"].reload()
         self.settings_page.set_data_info(session_repo.counts(self.db), str(self.paths.root))
         self.settings_page.refresh_cards()
+        if hasattr(self, "onboarding"):
+            self.onboarding.render()
 
     def _save_profile_name(self, name: str) -> None:
         profile = profile_repo.update_profile(self.db, display_name=name)
@@ -316,3 +338,5 @@ class MainWindow(QMainWindow):
             self.tray.render()
         for page in self.pages.values():
             page.retranslate()
+        if hasattr(self, "onboarding"):
+            self.onboarding.render()

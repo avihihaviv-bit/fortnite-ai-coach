@@ -109,3 +109,19 @@ def test_request_cache(tmp_path):
     assert request_cache.get(db, k) is None
     request_cache.put(db, k, "{}")
     assert request_cache.get(db, k) == "{}" and request_cache.make_key(fp="a", seg=2) != k
+
+
+def test_flash_discovery_and_ranking():
+    from fortnite_coach.ai.gemini_config import usable_models
+
+    names = ["gemini-2.5-flash", "gemini-3-flash", "gemini-3-flash-lite", "gemini-3-pro", "gemini-2.5-flash-preview-tts",
+             "gemini-3-flash-image", "gemini-3.1-flash-preview", "text-embedding-004", "gemini-2.5-flash-live"]
+    assert usable_models(names) == ["gemini-3-flash", "gemini-3-flash-lite", "gemini-2.5-flash", "gemini-3.1-flash-preview"]
+
+
+def test_retired_default_is_replaced_only_if_user_never_chose():
+    newer = FakeClient(models=("gemini-3-flash", "gemini-3-flash-lite"))  # TEST DATA: 2.5 retired
+    r = run_connection_test(service(newer), may_pick=True)
+    assert r.ok and r.picked_model == "gemini-3-flash"
+    r = run_connection_test(service(FakeClient(models=("gemini-3-flash",))), may_pick=False)
+    assert not r.ok and r.error_key == "gemini.err_model" and r.available_models == ["gemini-3-flash"]
