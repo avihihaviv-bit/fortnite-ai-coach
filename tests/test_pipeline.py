@@ -57,7 +57,8 @@ def test_full_analysis_stores_report_mistakes_and_xp(env):
     steps = []
     out = run_analysis(db, paths, s, svc(c), req, progress=lambda k, i, n: steps.append(k))
     assert out.analyzed_segments == 3 and out.failed_segments == 0
-    assert c.uploads == 1 and len(c.generate_calls) == 3
+    assert c.uploads == 0 and len(c.generate_calls) == 3  # short video: sent inside the request
+    assert c.generate_calls[0][1][0].parts[0].inline_data is not None
     assert {"job.preparing", "job.uploading", "job.segment", "job.saving"} <= set(steps)
     d = report_repo.report_detail(db, out.report_id)
     assert len(d.mistakes) == 3 and all(m.how_to_practice and m.evidence for m in d.mistakes)
@@ -75,7 +76,7 @@ def test_same_video_again_costs_nothing_and_gives_no_xp(env):
     c = FakeClient(responses=responses())
     run_analysis(db, paths, s, svc(c), req)
     out2 = run_analysis(db, paths, s, svc(c), req)
-    assert out2.reused_report and c.uploads == 1 and len(c.generate_calls) == 3
+    assert out2.reused_report and c.uploads == 0 and len(c.generate_calls) == 3
     req.depth = AnalysisDepth.DETAILED  # different settings -> new requests, but still no double XP
     c2 = FakeClient(responses=responses())
     out3 = run_analysis(db, paths, s, svc(c2), req)
@@ -173,3 +174,41 @@ def test_invalid_json_is_retried_once(env):
     c = FakeClient(responses=["{not json", segment_json("00:05"), segment_json("00:40"), segment_json("01:05")])
     out = run_analysis(db, paths, s, svc(c), req)
     assert out.analyzed_segments == 3 and len(c.generate_calls) == 4
+
+
+def test_large_video_uses_files_api(env, monkeypatch):
+    from fortnite_coach.coaching import pipeline
+
+    monkeypatch.setattr(pipeline, "INLINE_MAX_MB", 0.0)
+    db, paths, s, req = env
+    c = FakeClient(responses=responses())
+    run_analysis(db, paths, s, svc(c), req)
+    assert c.uploads == 1 and c.generate_calls[0][1][0].parts[0].file_data is not None
+
+
+def test_missing_uploaded_file_falls_back_to_inline(env, monkeypatch):
+    """Files API upload 'not found' at analysis time: resend the video inside the request."""
+    from fortnite_coach.coaching import pipeline
+
+    db, paths, s, req = env
+    monkeypatch.setattr(pipeline, "INLINE_MAX_MB", 0.0)
+    c = FakeClient(responses=[FakeAPIError(404, "Requested entity was not found."), *responses()])
+    orig_upload = pipeline._upload
+
+    def upload_then_allow_inline(*a, **k):
+        f = orig_upload(*a, **k)
+        monkeypatch.setattr(pipeline, "INLINE_MAX_MB", 14.0)  # the proxy is small enough to inline
+        return f
+
+    monkeypatch.setattr(pipeline, "_upload", upload_then_allow_inline)
+    out = run_analysis(db, paths, s, svc(c), req)
+    assert out.analyzed_segments == 3 and out.failed_segments == 0
+    assert c.generate_calls[1][1][0].parts[0].inline_data is not None
+
+
+def test_failure_keeps_googles_own_message(env):
+    db, paths, s, req = env
+    c = FakeClient(responses=[FakeAPIError(400, "API key not valid. Please pass a valid API key. TEST DATA")])
+    with pytest.raises(GeminiError) as e:
+        run_analysis(db, paths, s, svc(c), req)
+    assert "API key not valid" in str(e.value) and "no segment analyzed" not in str(e.value)

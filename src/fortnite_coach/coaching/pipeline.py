@@ -38,6 +38,10 @@ from fortnite_coach.video.proxy import make_proxy, proxy_path
 from fortnite_coach.video.segments import Segment, plan_segments
 
 log = logging.getLogger(__name__)
+# Videos up to this size are sent inside the request (no Files API upload). Requests are limited to
+# about 20 MB including base64 overhead, so 14 MB of video is the safe maximum.
+INLINE_MAX_MB = 14.0
+
 FATAL_KEYS = {"gemini.err_key", "gemini.err_quota_daily", "gemini.err_model", "gemini.not_configured",
               "gemini.err_no_free_quota", "gemini.err_region", "gemini.err_file"}
 
@@ -149,7 +153,10 @@ def run_analysis(
                 raise VideoError(f"{size_mb:.0f} MB", i18n_key="video.err_too_big")
             check_cancel()
             progress("job.uploading", 0, 0)
-            uploaded = _upload(db, service, proxy, out.name, cancel)
+            if size_mb <= INLINE_MAX_MB:
+                uploaded = UploadedFile("", "", "video/mp4", inline_path=proxy)  # short video: no upload step
+            else:
+                uploaded = _upload(db, service, proxy, out.name, cancel)
 
         knowledge = [(e.title, e.content) for e in knowledge_repo.current_entries(db) if e.kind == "fundamental"]
         season = [(e.title, e.content, f"{e.retrieved_at:%Y-%m-%d}", e.source_name or "")
@@ -159,6 +166,7 @@ def run_analysis(
         raw: list[dict] = []
         coverage: list[dict] = []
         fatal: str | None = None
+        first_detail = ""
         for i, seg in enumerate(p.segments):
             entry = {"index": seg.index, "start_s": seg.start_s, "end_s": seg.end_s, "analyzed": False, "note": ""}
             coverage.append(entry)
@@ -205,6 +213,27 @@ def run_analysis(
             except OperationCancelledError:
                 raise
             except GeminiError as e:
+                if (e.i18n_key in ("gemini.err_file", "gemini.err_model") and uploaded is not None
+                        and uploaded.inline_path is None and p.proxy_needed
+                        and proxy.stat().st_size / 1_048_576 <= INLINE_MAX_MB):
+                    # The uploaded file could not be found: send the video inside the request instead.
+                    uploaded = UploadedFile("", "", "video/mp4", inline_path=proxy)
+                    try:
+                        text = service.generate_segment(uploaded, seg.start_s, seg.end_s, profile.fps,
+                                                        profile.low_resolution, system,
+                                                        segment_prompt(seg.start_s, seg.end_s, i, len(analyzed_segs)),
+                                                        SegmentResult, cancel).text
+                        result = load_segment_result(text)
+                        request_cache.put(db, key, text)
+                        usage_tracker.record(db, model=model, kind="analysis", success=True)
+                        parsed.append(validate_segment(result, seg.index, seg.start_s, seg.end_s))
+                        raw.append(json.loads(text))
+                        entry["analyzed"] = True
+                        outcome.analyzed_segments += 1
+                        continue
+                    except GeminiError as e2:
+                        e = e2
+                first_detail = first_detail or str(e)
                 usage_tracker.record(db, model=model, kind="analysis", success=False, error_code=e.i18n_key)
                 entry["note"] = e.i18n_key
                 outcome.failed_segments += 1
@@ -214,7 +243,9 @@ def run_analysis(
 
         if not parsed:
             session_repo.set_status(db, session_id, SessionStatus.FAILED)
-            raise GeminiError("no segment analyzed", i18n_key=outcome.errors[0] if outcome.errors else "error.gemini")
+            # Keep Google's own words for the user (the first real error), not a generic message.
+            raise GeminiError(first_detail or "no segment analyzed",
+                              i18n_key=outcome.errors[0] if outcome.errors else "error.gemini")
 
         progress("job.saving", 0, 0)
         agg = aggregate(parsed)

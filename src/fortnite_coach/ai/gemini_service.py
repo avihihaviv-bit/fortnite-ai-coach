@@ -59,7 +59,7 @@ def classify(exc: Exception) -> ClassifiedError:
     if code in (401, 403) or "api key not valid" in low or "api_key_invalid" in low or "permission_denied" in low \
             or "api key expired" in low:
         return ClassifiedError("gemini.err_key", False)
-    if code == 404 or "not_found" in low or "not found" in low:
+    if code == 404 or (code is None and ("not_found" in low or "not found" in low)):
         if "file" in low and "model" not in low:
             return ClassifiedError("gemini.err_file", False)  # uploaded video expired / missing
         return ClassifiedError("gemini.err_model", False)  # e.g. "no longer available to new users"
@@ -89,6 +89,7 @@ class UploadedFile:
     name: str
     uri: str
     mime_type: str
+    inline_path: Path | None = None  # small videos are sent inside the request instead of via the Files API
 
 
 @dataclass
@@ -210,10 +211,16 @@ class GeminiService:
     ) -> GenerateResult:
         from google.genai import types
 
+        inline_bytes = file.inline_path.read_bytes() if file.inline_path else None
+
         def build(minimal: bool):
             meta = types.VideoMetadata(start_offset=f"{start_s:.1f}s", end_offset=f"{end_s:.1f}s",
                                        fps=None if minimal else fps)
-            video = types.Part(file_data=types.FileData(file_uri=file.uri, mime_type=file.mime_type), video_metadata=meta)
+            if inline_bytes is not None:
+                video = types.Part(inline_data=types.Blob(data=inline_bytes, mime_type=file.mime_type), video_metadata=meta)
+            else:
+                video = types.Part(file_data=types.FileData(file_uri=file.uri, mime_type=file.mime_type),
+                                   video_metadata=meta)
             config = types.GenerateContentConfig(
                 system_instruction=system_instruction,
                 response_mime_type="application/json",
