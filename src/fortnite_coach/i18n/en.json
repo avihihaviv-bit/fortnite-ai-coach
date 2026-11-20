@@ -516,5 +516,7 @@
   "rec.interrupted": "Capture was cut off {n} time(s) (e.g. when Fortnite switched display mode) and resumed automatically. Short gaps are possible. Tip: start recording when Fortnite is already in the lobby.",
   "video.err_merge": "The recording parts could not be joined. The parts are kept in the recordings folder.",
   "gemini.details": "Google said: {text}",
-  "gemini.err_file": "The uploaded video is no longer available at Google. Analyze again to re-upload it."
+  "gemini.err_file": "The uploaded video is no longer available at Google. Analyze again to re-upload it.",
+  "gemini.err_no_free_quota": "This model has no free quota for your key (Google set its free limit to 0). Click Test connection: the app will pick a free model that works.",
+  "gemini.err_region": "Google does not offer the Gemini API in your current location (or through your VPN). Turn off any VPN and try again."
 }

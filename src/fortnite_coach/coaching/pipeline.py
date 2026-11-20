@@ -38,7 +38,8 @@ from fortnite_coach.video.proxy import make_proxy, proxy_path
 from fortnite_coach.video.segments import Segment, plan_segments
 
 log = logging.getLogger(__name__)
-FATAL_KEYS = {"gemini.err_key", "gemini.err_quota_daily", "gemini.err_model", "gemini.not_configured"}
+FATAL_KEYS = {"gemini.err_key", "gemini.err_quota_daily", "gemini.err_model", "gemini.not_configured",
+              "gemini.err_no_free_quota", "gemini.err_region", "gemini.err_file"}
 
 ProgressFn = Callable[[str, int, int], None]  # (i18n step key, current, total)
 
@@ -174,14 +175,25 @@ def run_analysis(
             text = request_cache.get(db, key)
             from_cache = text is not None
             try:
-                if not from_cache:
+                def ask():
                     res = service.generate_segment(uploaded, seg.start_s, seg.end_s, profile.fps, profile.low_resolution,
                                                    system, segment_prompt(seg.start_s, seg.end_s, i, len(analyzed_segs)),
                                                    SegmentResult, cancel)
-                    text = res.text
                     usage_tracker.record(db, model=model, kind="analysis", success=True,
                                          prompt_tokens=res.prompt_tokens, output_tokens=res.output_tokens)
-                result = load_segment_result(text)
+                    return res.text
+
+                if not from_cache:
+                    text = ask()
+                try:
+                    result = load_segment_result(text)
+                except GeminiError:
+                    if from_cache:
+                        raise
+                    # One retry when the answer is not valid JSON (rare, but happens with long answers).
+                    usage_tracker.check_budget(db, settings.limits, 1)
+                    text = ask()
+                    result = load_segment_result(text)
                 if not from_cache:
                     request_cache.put(db, key, text)
                 else:

@@ -48,10 +48,16 @@ def classify(exc: Exception) -> ClassifiedError:
     m = re.search(r"retry(?:delay)?[\"': in]+(\d+(?:\.\d+)?)s", low)
     delay = float(m.group(1)) if m else None
     if code == 429 or "resource_exhausted" in low:
+        if re.search(r"limit[\"': ]+0\b", low):
+            # "limit: 0": this model has NO free quota for this key (not "used up today")
+            return ClassifiedError("gemini.err_no_free_quota", False)
         if "perday" in low.replace(" ", "") or "per day" in low or (delay and delay > MAX_RETRY_DELAY_S):
             return ClassifiedError("gemini.err_quota_daily", False)
         return ClassifiedError("gemini.err_rate_limit", True, delay)
-    if code in (401, 403) or "api key not valid" in low or "api_key_invalid" in low or "permission_denied" in low:
+    if "location is not supported" in low or "user location" in low:
+        return ClassifiedError("gemini.err_region", False)
+    if code in (401, 403) or "api key not valid" in low or "api_key_invalid" in low or "permission_denied" in low \
+            or "api key expired" in low:
         return ClassifiedError("gemini.err_key", False)
     if code == 404 or "not_found" in low or "not found" in low:
         if "file" in low and "model" not in low:
@@ -74,7 +80,8 @@ def _default_client_factory(api_key: str, timeout_s: int):
     from google import genai
     from google.genai import types
 
-    return genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=timeout_s * 1000))
+    # Uploading a video can take minutes on a slow connection: never shorter than 10 minutes.
+    return genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=max(timeout_s, 600) * 1000))
 
 
 @dataclass
@@ -149,7 +156,7 @@ class GeminiService:
 
         target = model or self.model
         self._with_retries(lambda: self.client.models.generate_content(
-            model=target, contents=self.PING, config=types.GenerateContentConfig(max_output_tokens=8, temperature=0)))
+            model=target, contents=self.PING, config=types.GenerateContentConfig(max_output_tokens=64, temperature=0)))
 
     def list_models(self) -> list[str]:
         def call():
@@ -203,27 +210,39 @@ class GeminiService:
     ) -> GenerateResult:
         from google.genai import types
 
-        video = types.Part(
-            file_data=types.FileData(file_uri=file.uri, mime_type=file.mime_type),
-            video_metadata=types.VideoMetadata(start_offset=f"{start_s:.1f}s", end_offset=f"{end_s:.1f}s", fps=fps),
-        )
-        config = types.GenerateContentConfig(
-            system_instruction=system_instruction,
-            response_mime_type="application/json",
-            response_schema=schema,
-            temperature=0.2,
-            media_resolution=(types.MediaResolution.MEDIA_RESOLUTION_LOW if low_resolution
-                              else types.MediaResolution.MEDIA_RESOLUTION_MEDIUM),
-        )
-        contents = [types.Content(role="user", parts=[video, types.Part(text=prompt)])]
+        def build(minimal: bool):
+            meta = types.VideoMetadata(start_offset=f"{start_s:.1f}s", end_offset=f"{end_s:.1f}s",
+                                       fps=None if minimal else fps)
+            video = types.Part(file_data=types.FileData(file_uri=file.uri, mime_type=file.mime_type), video_metadata=meta)
+            config = types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                response_mime_type="application/json",
+                response_schema=schema,
+                temperature=0.2,
+                media_resolution=None if minimal else (types.MediaResolution.MEDIA_RESOLUTION_LOW if low_resolution
+                                                       else types.MediaResolution.MEDIA_RESOLUTION_MEDIUM),
+            )
+            return [types.Content(role="user", parts=[video, types.Part(text=prompt)])], config
 
-        def call():
+        def call(minimal: bool):
+            contents, config = build(minimal)
             resp = self.client.models.generate_content(model=self.model, contents=contents, config=config)
             text = getattr(resp, "text", None)
             if not text:
-                raise GeminiError("empty response", i18n_key="gemini.err_blocked")
+                reason = ""
+                cands = getattr(resp, "candidates", None) or []
+                if cands:
+                    reason = str(getattr(cands[0], "finish_reason", "") or "")
+                raise GeminiError(f"empty response {reason}".strip(), i18n_key="gemini.err_blocked")
             usage = getattr(resp, "usage_metadata", None)
-            return GenerateResult(text, getattr(usage, "prompt_token_count", None),
-                                  getattr(usage, "candidates_token_count", None))
+            out_tokens = (getattr(usage, "candidates_token_count", None) or 0) + (getattr(usage, "thoughts_token_count", None) or 0)
+            return GenerateResult(text, getattr(usage, "prompt_token_count", None), out_tokens or None)
 
-        return self._with_retries(call, cancel)
+        try:
+            return self._with_retries(lambda: call(False), cancel)
+        except GeminiError as e:
+            if e.i18n_key != "gemini.err_bad_request":
+                raise
+            # Some models reject optional video settings (custom fps / media resolution): retry once without them.
+            log.warning("Retrying segment without optional video settings after: %s", str(e)[:200])
+            return self._with_retries(lambda: call(True), cancel)

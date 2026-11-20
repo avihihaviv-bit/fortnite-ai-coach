@@ -50,8 +50,8 @@ def test_connection(service: GeminiService, *, may_pick: bool = False) -> Connec
             service.ping(model)
         except GeminiError as e:
             detail = redact(str(e))[:400]
-            if e.i18n_key in ("gemini.err_model", "gemini.err_bad_request"):
-                continue  # this model is not usable for this key: try the next one
+            if e.i18n_key in ("gemini.err_model", "gemini.err_bad_request", "gemini.err_no_free_quota"):
+                continue  # this model is not usable (or not free) for this key: try the next one
             return ConnectionTestResult(False, usable, e.i18n_key, now, detail=detail)
         picked = model if model != service.model else None
         service.model = model

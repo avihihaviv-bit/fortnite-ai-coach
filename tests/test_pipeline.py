@@ -85,7 +85,9 @@ def test_same_video_again_costs_nothing_and_gives_no_xp(env):
 
 def test_partial_failure_is_reported_honestly(env):
     db, paths, s, req = env
-    c = FakeClient(responses=[segment_json("00:05"), FakeAPIError(400, "bad request"), segment_json("01:05")])
+    # segment 2 fails both with and without the optional video settings
+    c = FakeClient(responses=[segment_json("00:05"), FakeAPIError(400, "bad request"), FakeAPIError(400, "bad request"),
+                              segment_json("01:05")])
     out = run_analysis(db, paths, s, svc(c), req)
     assert out.analyzed_segments == 2 and out.failed_segments == 1
     cov = report_repo.report_detail(db, out.report_id).report.coverage
@@ -153,3 +155,21 @@ def test_prompt_contains_rules_and_codes(env):
     system = c.generate_calls[0][2].system_instruction
     for needle in ("Never invent", "not_determinable", "EDIT_EXPOSED_AFTER", "EDIT_HARD_FAST", "sensitivity", "box_fights"):
         assert needle in system
+
+
+def test_bad_request_retries_without_optional_video_settings(env):
+    db, paths, s, req = env
+    c = FakeClient(responses=[FakeAPIError(400, "Invalid value at 'media_resolution'"), segment_json("00:05"),
+                              segment_json("00:40"), segment_json("01:05")])
+    out = run_analysis(db, paths, s, svc(c), req)
+    assert out.analyzed_segments == 3 and out.failed_segments == 0
+    first, retry = c.generate_calls[0], c.generate_calls[1]
+    assert first[2].media_resolution is not None and first[1][0].parts[0].video_metadata.fps == 1.0
+    assert retry[2].media_resolution is None and retry[1][0].parts[0].video_metadata.fps is None
+
+
+def test_invalid_json_is_retried_once(env):
+    db, paths, s, req = env
+    c = FakeClient(responses=["{not json", segment_json("00:05"), segment_json("00:40"), segment_json("01:05")])
+    out = run_analysis(db, paths, s, svc(c), req)
+    assert out.analyzed_segments == 3 and len(c.generate_calls) == 4

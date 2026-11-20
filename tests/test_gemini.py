@@ -146,3 +146,41 @@ def test_chosen_model_that_is_blocked_reports_google_text():
 def test_file_not_found_is_not_reported_as_model_problem():
     assert classify(FakeAPIError(404, "File files/abc is not found or not accessible")).i18n_key == "gemini.err_file"
     assert classify(FakeAPIError(404, "models/gemini-x is not found for API version v1beta")).i18n_key == "gemini.err_model"
+
+
+def test_no_free_quota_and_region_are_classified():
+    assert classify(FakeAPIError(429, "Quota exceeded for metric: generate_content_free_tier_requests, limit: 0, model: gemini-3-flash")).i18n_key == "gemini.err_no_free_quota"
+    assert classify(FakeAPIError(400, "User location is not supported for the API use.")).i18n_key == "gemini.err_region"
+
+
+def test_connection_test_skips_model_without_free_quota():
+    class NoQuota(FakeClient):
+        def _generate(self, model, contents, config):
+            if model == "gemini-3-flash":
+                raise FakeAPIError(429, "Quota exceeded ... limit: 0, model: gemini-3-flash")
+            return super()._generate(model, contents, config)
+
+    r = run_connection_test(service(NoQuota(models=("gemini-3-flash", "gemini-2.5-flash"))), may_pick=True)
+    assert r.ok and r.picked_model is None  # 3 has no free quota -> keeps the default 2.5 that works
+
+
+def test_tolerant_parsing_of_model_output():
+    data = json.loads(segment_json(start="00:05"))
+    data["mistakes"][0].update(skill="Editing", severity="HIGH", start="00:05-00:07", confidence=80)
+    data["good_plays"][0].update(skill="Editing", difficulty="Hard")
+    data["skill_assessments"][0]["skill"] = "Piece Control"
+    seg = validate_segment(SegmentResult.model_validate(data), 0, 0, 60)
+    assert seg.dropped == 0 and seg.mistakes[0].skill == "editing" and seg.mistakes[0].severity == "high"
+    assert seg.mistakes[0].start_s == 5 and seg.mistakes[0].confidence == 0.8
+    assert seg.good_plays[0].difficulty == "hard" and seg.assessments[0].skill == "piece_control"
+
+
+def test_segment_relative_timestamps_are_converted():
+    """Segment 2:00-4:00: '00:15' from the model means 02:15 in the video, '02:30' is already absolute."""
+    data = json.loads(segment_json(start="00:15"))
+    seg = validate_segment(SegmentResult.model_validate(data), 1, 120, 240)
+    assert seg.dropped == 0 and seg.mistakes[0].start_s == 135
+    data = json.loads(segment_json(start="02:30"))
+    assert validate_segment(SegmentResult.model_validate(data), 1, 120, 240).mistakes[0].start_s == 150
+    data = json.loads(segment_json(start="09:00"))  # neither absolute nor relative: rejected
+    assert validate_segment(SegmentResult.model_validate(data), 1, 120, 240).dropped == 2
