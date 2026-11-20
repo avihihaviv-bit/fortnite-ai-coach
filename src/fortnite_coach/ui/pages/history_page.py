@@ -116,7 +116,9 @@ class HistoryPage(BasePage):
                         total=fmt_ts(sum(c["end_s"] - c["start_s"] for c in cov)))]
         for c in cov:
             if not c.get("analyzed"):
-                reason = tr("report.over_limit") if c.get("note") == "over_limit" else tr(c.get("note") or "error.gemini")
+                note = c.get("note") or "error.gemini"
+                reason = {"over_limit": tr("report.over_limit"), "before_start": tr("report.before_start")}.get(note, None) \
+                    or tr(note)
                 cov_lines.append(tr("report.not_analyzed", start=fmt_ts(c["start_s"]), end=fmt_ts(c["end_s"]), reason=reason))
         if d.dropped:
             cov_lines.append(tr("report.dropped", n=d.dropped))

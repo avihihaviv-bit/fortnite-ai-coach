@@ -208,14 +208,17 @@ class GeminiService:
     def generate_segment(
         self, file: UploadedFile, start_s: float, end_s: float, fps: float, low_resolution: bool,
         system_instruction: str, prompt: str, schema: type, cancel: threading.Event | None = None,
+        whole_video: bool = False,
     ) -> GenerateResult:
+        """whole_video: the segment is the entire file, so no cut points are sent (one fewer feature to rely on)."""
         from google.genai import types
 
         inline_bytes = file.inline_path.read_bytes() if file.inline_path else None
 
         def build(minimal: bool):
-            meta = types.VideoMetadata(start_offset=f"{start_s:.1f}s", end_offset=f"{end_s:.1f}s",
-                                       fps=None if minimal else fps)
+            offsets = {} if whole_video else {"start_offset": f"{start_s:.1f}s", "end_offset": f"{end_s:.1f}s"}
+            rate = None if minimal else fps
+            meta = types.VideoMetadata(**offsets, fps=rate) if (offsets or rate) else None
             if inline_bytes is not None:
                 video = types.Part(inline_data=types.Blob(data=inline_bytes, mime_type=file.mime_type), video_metadata=meta)
             else:

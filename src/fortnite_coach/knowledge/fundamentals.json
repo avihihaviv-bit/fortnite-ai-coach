@@ -1,5 +1,5 @@
 {
-  "pack_version": 1,
+  "pack_version": 2,
   "source_name": "Fortnite AI Coach built-in fundamentals (general principles, not season-specific)",
   "note": "Only principles that do not depend on a season. Weapon stats, items, map codes and meta must come from dated, sourced research entries.",
   "entries": [
@@ -128,6 +128,55 @@
       "title": "Opening a fight",
       "title_he": "פתיחת קרב",
       "content": "A strong opening combines protection with the first damage: take the shot from cover, then follow up while the opponent is weak, or reset if they are protected."
+    },
+    {
+      "key": "pc_take_and_lock",
+      "topic": "piece_control",
+      "title": "Take it, then lock it",
+      "title_he": "לקחת ואז לנעול",
+      "content": "Taking a wall is only half of piece control: lock it right away (a cone or floor) so the opponent cannot replace it. When the opponent takes your wall, retake it immediately instead of waiting."
+    },
+    {
+      "key": "bld_low_ground_first",
+      "topic": "building",
+      "title": "Survive the low ground first",
+      "title_he": "קודם לשרוד בגובה הנמוך",
+      "content": "A retake cannot start if you are already dead. On low ground, protect first (walls and a cone or floor over you) and only then begin a retake. Most failed retakes are lost to damage taken before the first ramp."
+    },
+    {
+      "key": "bld_few_retakes",
+      "topic": "building",
+      "title": "Master a few retakes",
+      "title_he": "לשלוט בכמה ריטייקים",
+      "content": "Players improve faster by mastering two or three reliable retakes (for example a protected double ramp, a 180-style retake and a side-jump retake) than by half-learning many. Vary between them so the opponent cannot pre-edit your path."
+    },
+    {
+      "key": "bld_nineties",
+      "topic": "building",
+      "title": "90s for height",
+      "title_he": "90s לגובה",
+      "content": "90s are the standard way to gain height quickly while staying covered. Broken turns (a missed wall or ramp) are what lose the height race, so clean consistency beats raw speed."
+    },
+    {
+      "key": "box_phase_trap",
+      "topic": "piece_control",
+      "title": "Box fights: phase and trap",
+      "title_he": "קרבות קופסה: פייז ולכידה",
+      "content": "Box fights are won by controlling pieces around the opponent: taking their walls, cones and floors, phasing into their box and trapping them so they cannot reset. Practice them in Creative box-fight maps."
+    },
+    {
+      "key": "edt_pre_edit",
+      "topic": "editing",
+      "title": "Pre-edits",
+      "title_he": "פרי-אדיטים",
+      "content": "A pre-edit (selecting the edit before you need it) or a double-edit peek opens the line of sight at the exact moment you are ready to shoot, instead of after the opponent has already aimed at your wall."
+    },
+    {
+      "key": "learning_order",
+      "topic": "building",
+      "title": "Learning order",
+      "title_he": "סדר למידה",
+      "content": "A common progression: clean box, ramp rush, 90s, edits, tunneling, piece control, then high-ground retakes. Weakness in an earlier step usually shows up as mistakes in the later ones."
     }
   ]
 }

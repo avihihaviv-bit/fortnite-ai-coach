@@ -111,7 +111,7 @@ def test_import_video_shows_metadata_and_blocks_analysis(win, qtbot, sample_vide
     assert page.meta_labels["fps"][1].text() == "30"
     assert page.meta_labels["duration"][1].text() == "00:06"
     assert not page.thumb_labels[0].pixmap().isNull()
-    assert "Will analyze 00:06 of 00:06" in page.coverage_label.text()
+    assert "Will analyze 00:00–00:06 (00:06 of 00:06" in page.coverage_label.text()
     assert not page.analyze_btn.isEnabled()
     assert "API key not configured" in page.analyze_reason.text()
     assert session_repo.counts(win.db)["videos"] == 1

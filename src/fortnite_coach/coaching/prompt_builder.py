@@ -7,6 +7,22 @@ from fortnite_coach.core.game_modes import GameMode
 from fortnite_coach.core.skills import Skill
 
 
+# What a strong coach pays most attention to in each mode (season-independent).
+MODE_HINTS = {
+    GameMode.CREATIVE_FREE_BUILD: "Free build practice: judge mechanics only (building sequences, 90s, edits, "
+                                  "consistency). There is no opponent, so do not judge fights or game sense.",
+    GameMode.REALISTIC_1V1: "Realistic 1v1: protection before shooting, piece control, retakes, edit timing, "
+                            "and when to reset or disengage.",
+    GameMode.BOX_FIGHTS: "Box fights: piece control (take and lock walls, cones, floors), phasing, trapping, "
+                         "edit-and-shoot timing, right-hand peeks and resets.",
+    GameMode.ZONE_WARS: "Zone wars: early rotations, storm decisions, positioning vs. other players, third parties, "
+                        "and fights while moving.",
+    GameMode.RANKED: "Ranked: fight selection, third-party awareness, rotations, resource management, endgame layers.",
+    GameMode.BATTLE_ROYALE: "Battle Royale: fight selection, third parties, rotations, resources, and fight execution.",
+    GameMode.OTHER: "Judge whatever is visible; say what could not be judged.",
+}
+
+
 def fmt_ts(seconds: float) -> str:
     s = int(round(seconds))
     return f"{s // 60:02d}:{s % 60:02d}"
@@ -20,6 +36,7 @@ def system_instruction(mode: GameMode, focus: list[str], language: str, knowledg
     lines = [
         "You are an elite competitive Fortnite coach (keyboard and mouse player) reviewing a recorded match.",
         f"Game mode: {mode.value}. Focus skills: {focus_names}.",
+        "What matters most in this mode: " + MODE_HINTS.get(mode, MODE_HINTS[GameMode.OTHER]),
         "",
         "STRICT RULES:",
         "- Judge ONLY what is visible or audible in the video. Never invent events.",
@@ -29,6 +46,8 @@ def system_instruction(mode: GameMode, focus: list[str], language: str, knowledg
         "- Give no generic advice like 'improve your building'. Say exactly what happened, what was better, why,",
         "  and one specific drill to practice the fix.",
         "- Report good plays honestly too (difficulty easy/medium/hard); do not inflate them.",
+        "- Prefer the most specific code; use OTHER only when no code fits.",
+        "- Be concrete about sides and pieces (left/right wall, cone, floor, ramp) when the video shows them.",
         "- A skill score (0-100) is allowed only when this segment shows enough evidence; otherwise null.",
         "- Weapon stats, items and season meta change: do not state them as current facts.",
         f"- Write every free-text field in {lang}. Keep codes and skill names exactly as listed.",

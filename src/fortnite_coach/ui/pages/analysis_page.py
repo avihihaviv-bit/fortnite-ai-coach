@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QProgressBar,
     QPushButton,
+    QSpinBox,
     QWidget,
 )
 from sqlalchemy import select
@@ -169,6 +170,21 @@ class AnalysisPage(BasePage):
         form.addRow(self.mode_label, self.mode_combo)
         form.addRow(self.depth_label, self.depth_combo)
         form.addRow(self.focus_label, focus_row)
+        # where to start: long matches start with landing/looting, the fights are later
+        self.start_label = QLabel()
+        start_row = QHBoxLayout()
+        self.start_spin = QSpinBox()
+        self.start_spin.setRange(0, 0)
+        self.start_spin.valueChanged.connect(lambda _v: self._render_coverage())
+        self.start_begin_btn = QPushButton()
+        self.start_end_btn = QPushButton()
+        self.start_begin_btn.clicked.connect(lambda: self.start_spin.setValue(0))
+        self.start_end_btn.clicked.connect(self._start_at_end)
+        start_row.addWidget(self.start_spin)
+        start_row.addWidget(self.start_begin_btn)
+        start_row.addWidget(self.start_end_btn)
+        start_row.addStretch(1)
+        form.addRow(self.start_label, start_row)
         self.setup_card.body.addLayout(form)
         self.coverage_label = QLabel()
         self.coverage_label.setWordWrap(True)
@@ -447,7 +463,7 @@ class AnalysisPage(BasePage):
         req = pipeline.AnalysisRequest(
             video_id=self._video_id(), video_path=m.path, fingerprint=self.current.fingerprint, duration_s=m.duration_s,
             mode=self.selected_mode(), depth=self.selected_depth(), focus=self.selected_focus(),
-            language=get_translator().language)
+            language=get_translator().language, start_s=min(self.start_seconds(), max(0.0, m.duration_s - 1)))
         plan = pipeline.plan(self.ctx.db, settings, req)
         covered = sum(x.length_s for x in plan.segments if x.analyzed)
         est_mb = covered * (2.5 if req.depth.value == "detailed" else 1.5) / 8
@@ -523,17 +539,35 @@ class AnalysisPage(BasePage):
         self.ctx.data_changed()
         self.refresh_status()
 
+    def start_seconds(self) -> float:
+        return float(self.start_spin.value() * 60)
+
+    def _start_at_end(self) -> None:
+        """Analyze the last part of the match (where endgame fights happen)."""
+        if self.current is None:
+            return
+        limit = self.ctx.settings().limits.max_video_seconds
+        self.start_spin.setValue(max(0, int((self.current.meta.duration_s - limit) // 60)))
+
     def _render_coverage(self) -> None:
         if self.current is None:
             self.coverage_label.setText("")
             return
         s = self.ctx.settings()
-        segs = plan_segments(self.current.meta.duration_s, s.video.segment_seconds, s.limits.max_video_seconds)
-        done, total = coverage(segs)
-        skipped = [x for x in segs if not x.analyzed]
-        text = tr("analysis.coverage", analyzed=fmt_duration(done), total=fmt_duration(total), n=sum(x.analyzed for x in segs))
-        if skipped:
-            text += "\n" + tr("analysis.not_covered", start=fmt_duration(skipped[0].start_s), end=fmt_duration(total))
+        total = self.current.meta.duration_s
+        self.start_spin.blockSignals(True)
+        self.start_spin.setRange(0, max(0, int(total // 60)))
+        self.start_spin.blockSignals(False)
+        start = min(self.start_seconds(), max(0.0, total - 1))
+        segs = plan_segments(total - start, s.video.segment_seconds, s.limits.max_video_seconds)
+        done, _rest = coverage(segs)
+        analyzed_end = start + sum(x.length_s for x in segs if x.analyzed)
+        text = tr("analysis.coverage_range", start=fmt_duration(start), end=fmt_duration(analyzed_end),
+                  analyzed=fmt_duration(done), total=fmt_duration(total), n=sum(x.analyzed for x in segs))
+        if analyzed_end < total - 0.5:
+            text += "\n" + tr("analysis.not_covered", start=fmt_duration(analyzed_end), end=fmt_duration(total))
+        if start > 0:
+            text += "\n" + tr("analysis.skipped_start", end=fmt_duration(start))
         self.coverage_label.setText(text)
 
     def _render_video(self) -> None:
@@ -583,6 +617,11 @@ class AnalysisPage(BasePage):
         self.mode_label.setText(tr("analysis.mode"))
         self.depth_label.setText(tr("analysis.depth"))
         self.focus_label.setText(tr("analysis.focus"))
+        self.start_label.setText(tr("analysis.start_at"))
+        self.start_spin.setSuffix(" " + tr("analysis.minute"))
+        self.start_begin_btn.setText(tr("analysis.from_start"))
+        self.start_end_btn.setText(tr("analysis.last_part"))
+        self.start_end_btn.setToolTip(tr("analysis.last_part_tip"))
         for i in range(self.mode_combo.count()):
             self.mode_combo.setItemText(i, tr(f"mode.{self.mode_combo.itemData(i)}"))
         for i in range(self.depth_combo.count()):

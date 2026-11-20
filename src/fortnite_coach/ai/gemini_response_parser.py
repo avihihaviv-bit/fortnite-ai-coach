@@ -139,3 +139,15 @@ def validate_segment(result: SegmentResult, index: int, seg_start: float, seg_en
                                                 max(0, a.evidence_count) if score is not None else 0,
                                                 _clamp01(a.confidence), a.rationale.strip()))
     return out
+
+
+def shift_segment(seg: ParsedSegment, offset: float) -> ParsedSegment:
+    """Times from an analysis copy that starts at `offset` -> absolute times in the original video."""
+    if not offset:
+        return seg
+    seg.start_s += offset
+    seg.end_s += offset
+    for item in (*seg.mistakes, *seg.good_plays):
+        item.start_s += offset
+        item.end_s += offset
+    return seg

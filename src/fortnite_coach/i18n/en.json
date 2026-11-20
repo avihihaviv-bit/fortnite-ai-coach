@@ -504,7 +504,7 @@
   "help.before.title": "Before you play",
   "help.before.body": "• Open the app first. It can stay next to the clock (tray).<br>• In Fortnite set <b>Display Mode: Windowed Fullscreen</b> (exclusive fullscreen may record black).<br>• Start recording: <b>{start}</b> · Stop: <b>{stop}</b>. A red <b>REC</b> shows in the app and on the tray icon.<br>• Short sessions (2–10 minutes) give the clearest feedback and use less of your free quota.",
   "help.after.title": "After the game",
-  "help.after.body": "1. Close Fortnite (analysis is blocked while it runs).<br>2. Gameplay Analysis → <b>Load this recording</b> (or Choose video…).<br>3. Pick the game mode, depth (Standard is a good start) and focus skills.<br>4. <b>Analyze with Gemini</b> → check the confirmation (requests, upload size) → Yes.<br>5. The report opens in History when it is done. You can keep using the app meanwhile.",
+  "help.after.body": "1. Close Fortnite (analysis is blocked while it runs).<br>2. Gameplay Analysis → <b>Load this recording</b> (or Choose video…).<br>3. Pick the game mode, depth (Standard is a good start) and focus skills. For a long match use <b>Start at</b> or <b>Last part of the match</b> to analyze the fights instead of the landing.<br>4. <b>Analyze with Gemini</b> → check the confirmation (requests, upload size) → Yes.<br>5. The report opens in History when it is done. You can keep using the app meanwhile.",
   "help.report.title": "Reading the report",
   "help.report.body": "• Every mistake has a <b>timestamp</b>, what you did, what was better, why, a <b>drill</b>, the evidence seen in the video and a confidence %.<br>• <b>Could not be judged</b> lists what the video did not show; nothing is guessed.<br>• Scores are AI estimates from this video only; counts (sessions, mistakes, minutes) are measured.<br>• The same mistake in 2+ sessions becomes a <b>priority</b> on the dashboard and in your training plan.",
   "help.levels.title": "Levels & XP",
@@ -518,5 +518,13 @@
   "gemini.details": "Google said: {text}",
   "gemini.err_file": "The uploaded video is no longer available at Google. Analyze again to re-upload it.",
   "gemini.err_no_free_quota": "This model has no free quota for your key (Google set its free limit to 0). Click Test connection: the app will pick a free model that works.",
-  "gemini.err_region": "Google does not offer the Gemini API in your current location (or through your VPN). Turn off any VPN and try again."
+  "gemini.err_region": "Google does not offer the Gemini API in your current location (or through your VPN). Turn off any VPN and try again.",
+  "analysis.start_at": "Start at",
+  "analysis.minute": "min",
+  "analysis.from_start": "From the start",
+  "analysis.last_part": "Last part of the match",
+  "analysis.last_part_tip": "Analyze the end of the video, where endgame fights usually are (uses your video-minutes limit).",
+  "analysis.coverage_range": "Will analyze {start}–{end} ({analyzed} of {total}, {n} segments). Measured from the file.",
+  "analysis.skipped_start": "Skipped: 00:00–{end} (before the chosen start).",
+  "report.before_start": "before the chosen start"
 }

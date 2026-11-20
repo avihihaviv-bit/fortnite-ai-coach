@@ -20,7 +20,7 @@ from pathlib import Path
 
 from fortnite_coach.ai import request_cache, usage_tracker
 from fortnite_coach.ai.gemini_config import DEPTH_PROFILES, PROMPT_VERSION
-from fortnite_coach.ai.gemini_response_parser import ParsedSegment, load_segment_result, validate_segment
+from fortnite_coach.ai.gemini_response_parser import ParsedSegment, load_segment_result, shift_segment, validate_segment
 from fortnite_coach.ai.gemini_service import GeminiService, UploadedFile
 from fortnite_coach.ai.schemas import SegmentResult
 from fortnite_coach.coaching.aggregate import aggregate
@@ -58,6 +58,7 @@ class AnalysisRequest:
     depth: AnalysisDepth
     focus: list[str]
     language: str
+    start_s: float = 0.0  # analyze from this point (e.g. skip landing/looting in a long match)
 
 
 @dataclass
@@ -82,13 +83,16 @@ class AnalysisOutcome:
 
 
 def _cache_key(req: AnalysisRequest, seg: Segment, model: str) -> str:
-    return request_cache.make_key(fp=req.fingerprint, start=seg.start_s, end=seg.end_s, depth=req.depth.value,
+    # segments are relative to the analysis copy; the cache key uses absolute video times
+    return request_cache.make_key(fp=req.fingerprint, start=req.start_s + seg.start_s, end=req.start_s + seg.end_s,
+                                  depth=req.depth.value,
                                   focus=sorted(req.focus), mode=req.mode.value, model=model, lang=req.language,
                                   prompt=PROMPT_VERSION)
 
 
 def plan(db: Database, settings: AppSettings, req: AnalysisRequest) -> AnalysisPlan:
-    segs = plan_segments(req.duration_s, settings.video.segment_seconds, settings.limits.max_video_seconds)
+    remaining = max(0.0, req.duration_s - req.start_s)
+    segs = plan_segments(remaining, settings.video.segment_seconds, settings.limits.max_video_seconds)
     analyzed = [s for s in segs if s.analyzed]
     cached = sum(1 for s in analyzed if request_cache.get(db, _cache_key(req, s, settings.gemini.model)))
     to_send = len(analyzed) - cached
@@ -145,9 +149,9 @@ def run_analysis(
             check_cancel()
             progress("job.preparing", 0, 0)
             covered_s = analyzed_segs[-1].end_s
-            out = proxy_path(paths.clips_dir, req.fingerprint, profile.proxy_height, covered_s)
+            out = proxy_path(paths.clips_dir, req.fingerprint, profile.proxy_height, covered_s, req.start_s)
             proxy = make_proxy(find_ffmpeg(settings.ffmpeg_path), Path(req.video_path), out,
-                               height=profile.proxy_height, max_seconds=covered_s, cancel=cancel)
+                               height=profile.proxy_height, max_seconds=covered_s, start_s=req.start_s, cancel=cancel)
             size_mb = proxy.stat().st_size / 1_048_576
             if size_mb > settings.limits.max_upload_mb:
                 raise VideoError(f"{size_mb:.0f} MB", i18n_key="video.err_too_big")
@@ -167,8 +171,13 @@ def run_analysis(
         coverage: list[dict] = []
         fatal: str | None = None
         first_detail = ""
+        whole = len(analyzed_segs) == 1 and len(p.segments) == 1  # one segment = the whole copy: no cut points
+        off = req.start_s
+        if off > 0:
+            coverage.append({"index": -1, "start_s": 0.0, "end_s": round(off, 3), "analyzed": False, "note": "before_start"})
         for i, seg in enumerate(p.segments):
-            entry = {"index": seg.index, "start_s": seg.start_s, "end_s": seg.end_s, "analyzed": False, "note": ""}
+            entry = {"index": seg.index, "start_s": round(seg.start_s + off, 3), "end_s": round(seg.end_s + off, 3),
+                     "analyzed": False, "note": ""}
             coverage.append(entry)
             if not seg.analyzed:
                 entry["note"] = "over_limit"
@@ -186,7 +195,7 @@ def run_analysis(
                 def ask():
                     res = service.generate_segment(uploaded, seg.start_s, seg.end_s, profile.fps, profile.low_resolution,
                                                    system, segment_prompt(seg.start_s, seg.end_s, i, len(analyzed_segs)),
-                                                   SegmentResult, cancel)
+                                                   SegmentResult, cancel, whole_video=whole)
                     usage_tracker.record(db, model=model, kind="analysis", success=True,
                                          prompt_tokens=res.prompt_tokens, output_tokens=res.output_tokens)
                     return res.text
@@ -206,7 +215,7 @@ def run_analysis(
                     request_cache.put(db, key, text)
                 else:
                     usage_tracker.record(db, model=model, kind="analysis", success=True, cache_hit=True)
-                parsed.append(validate_segment(result, seg.index, seg.start_s, seg.end_s))
+                parsed.append(shift_segment(validate_segment(result, seg.index, seg.start_s, seg.end_s), off))
                 raw.append(json.loads(text))
                 entry["analyzed"] = True
                 outcome.analyzed_segments += 1
@@ -222,11 +231,11 @@ def run_analysis(
                         text = service.generate_segment(uploaded, seg.start_s, seg.end_s, profile.fps,
                                                         profile.low_resolution, system,
                                                         segment_prompt(seg.start_s, seg.end_s, i, len(analyzed_segs)),
-                                                        SegmentResult, cancel).text
+                                                        SegmentResult, cancel, whole_video=whole).text
                         result = load_segment_result(text)
                         request_cache.put(db, key, text)
                         usage_tracker.record(db, model=model, kind="analysis", success=True)
-                        parsed.append(validate_segment(result, seg.index, seg.start_s, seg.end_s))
+                        parsed.append(shift_segment(validate_segment(result, seg.index, seg.start_s, seg.end_s), off))
                         raw.append(json.loads(text))
                         entry["analyzed"] = True
                         outcome.analyzed_segments += 1

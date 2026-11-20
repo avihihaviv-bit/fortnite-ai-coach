@@ -212,3 +212,25 @@ def test_failure_keeps_googles_own_message(env):
     with pytest.raises(GeminiError) as e:
         run_analysis(db, paths, s, svc(c), req)
     assert "API key not valid" in str(e.value) and "no segment analyzed" not in str(e.value)
+
+
+def test_analysis_from_a_chosen_start_point(env):
+    """Start at 0:30 of a 70 s video: the copy starts there, times in the report are absolute."""
+    db, paths, s, req = env
+    req.start_s = 30.0
+    c = FakeClient(responses=[segment_json("00:05"), segment_json("00:35")])
+    out = run_analysis(db, paths, s, svc(c), req)
+    d = report_repo.report_detail(db, out.report_id)
+    cov = d.report.coverage
+    assert cov[0] == {"index": -1, "start_s": 0.0, "end_s": 30.0, "analyzed": False, "note": "before_start"}
+    assert [(c_["start_s"], c_["end_s"]) for c_ in cov[1:]] == [(30.0, 60.0), (60.0, 70.0)]
+    assert sorted(round(m.timestamp_s) for m in d.mistakes) == [35, 65]  # 00:05 and 00:35 of the copy
+
+
+def test_single_segment_video_is_sent_without_cut_points(env):
+    db, paths, s, req = env
+    s.video.segment_seconds = 120  # the whole 70 s video is one segment
+    c = FakeClient(responses=[segment_json("00:05")])
+    run_analysis(db, paths, s, svc(c), req)
+    meta = c.generate_calls[0][1][0].parts[0].video_metadata
+    assert meta is not None and meta.start_offset is None and meta.end_offset is None and meta.fps == 1.0

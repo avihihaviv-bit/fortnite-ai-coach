@@ -89,7 +89,7 @@ CATALOG: tuple[ExerciseTemplate, ...] = (
         T("8 of 10 edits hit the target with no crosshair correction.", "8 מתוך 10 עריכות פוגעות במטרה בלי תיקון כוונת."),
         T("Vary the edit shape every time so the opening moves.", "להחליף צורת עריכה כל פעם כך שהפתח זז."),
         T("Edit course or 1v1 build map with bots", "מסלול עריכות או מפת 1 על 1 עם בוטים"),
-        ("EDIT_CROSSHAIR_OFF", "EDIT_WRONG_TIMING")),
+        ("EDIT_CROSSHAIR_OFF", "EDIT_WRONG_TIMING", "EDIT_NO_PRE_EDIT")),
     # ---------------- building ----------------
     ExerciseTemplate(
         "build_protected_tunnel", "building", B, "easy", 10,
@@ -112,7 +112,7 @@ CATALOG: tuple[ExerciseTemplate, ...] = (
         T("Gain height in 7 of 10 attempts without taking a free shot.", "להשיג גובה ב-7 מתוך 10 ניסיונות בלי לספוג ירייה חינם."),
         T("Practice against a real player in a 1v1 map.", "לתרגל מול שחקן אמיתי במפת 1 על 1."),
         T("1v1 build map", "מפת 1 על 1 בבנייה"),
-        ("BUILD_FAILED_RETAKE", "BUILD_LOST_HIGH_GROUND")),
+        ("BUILD_FAILED_RETAKE", "BUILD_LOST_HIGH_GROUND", "BUILD_LOW_GROUND_EXPOSED")),
     ExerciseTemplate(
         "build_pressure", "building", B, "medium", 10,
         T("Building under pressure", "בנייה תחת לחץ"),
@@ -125,6 +125,18 @@ CATALOG: tuple[ExerciseTemplate, ...] = (
         T("Add a second shooter or reduce materials.", "להוסיף יורה שני או להקטין חומרים."),
         T("1v1 build map or box fight map", "מפת 1 על 1 או מפת בוקס פייט"),
         ("BUILD_PANIC_SPAM", "BUILD_LATE_PROTECTION", "BUILD_OVERBUILD")),
+    ExerciseTemplate(
+        "build_nineties", "building", B, "easy", 10,
+        T("90s height ladder", "סולם 90s לגובה"),
+        T("Win the height race with clean, fast 90s.", "לנצח במרוץ לגובה עם 90s נקיים ומהירים."),
+        T("Free build: do 90s up to the height limit and back down, 5 times each direction. Then race a friend or a "
+          "timer: who reaches 10 turns first. Count broken turns (a missed wall/ramp) and restart the set on each one.",
+          "בנייה חופשית: 90s עד גבול הגובה ובחזרה למטה, 5 פעמים לכל כיוון. אחר כך מרוץ מול חבר או טיימר: מי מגיע "
+          "ראשון ל-10 סיבובים. לספור סיבובים שבורים (קיר/רמפה שהוחמצו) ולהתחיל את הסט מחדש על כל אחד."),
+        T("10 clean turns in a row with no broken piece.", "10 סיבובים נקיים ברצף בלי אף חלק שבור."),
+        T("Add a friend shooting at you, or switch to side-jump 90s.", "להוסיף חבר שיורה עליך, או לעבור ל-90s עם קפיצות לצד."),
+        T("Free build island", "אי בנייה חופשית"),
+        ("BUILD_SLOW_HEIGHT", "BUILD_LOST_HIGH_GROUND")),
     # ---------------- piece control ----------------
     ExerciseTemplate(
         "pc_wall_take", "piece_control", P, "medium", 12,
@@ -137,7 +149,7 @@ CATALOG: tuple[ExerciseTemplate, ...] = (
         T("10 wall takes in a row where you were not hit from the side.", "10 לקיחות קיר ברצף שבהן לא נפגעת מהצד."),
         T("Do it against a stronger player.", "לעשות מול שחקן חזק יותר."),
         T("Box fight map", "מפת בוקס פייט"),
-        ("PC_ATTACK_WITHOUT_PROTECTION", "PC_LOST_WALL")),
+        ("PC_ATTACK_WITHOUT_PROTECTION", "PC_LOST_WALL", "PC_NO_LOCK_AFTER_TAKE")),
     ExerciseTemplate(
         "pc_trap_convert", "piece_control", P, "hard", 15,
         T("Trap and convert", "לכלוא ולסגור"),

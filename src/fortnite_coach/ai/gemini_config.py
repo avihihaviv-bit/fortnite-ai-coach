@@ -13,7 +13,7 @@ ALLOWED_MODELS: tuple[str, ...] = ("gemini-2.5-flash", "gemini-2.5-flash-lite")
 DEFAULT_MODEL = ALLOWED_MODELS[0]
 
 _EXCLUDE = ("tts", "image", "live", "audio", "embedding", "native", "thinking", "learnlm", "-exp", "computer")
-PROMPT_VERSION = "1"
+PROMPT_VERSION = "2"
 
 
 @dataclass(frozen=True)
