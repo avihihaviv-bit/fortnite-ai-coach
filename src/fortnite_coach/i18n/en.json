@@ -578,7 +578,7 @@
   "live.turn_off": "Live Coach: turn off",
   "live.tips_count": "{n} tips",
   "live.info": "Live Coach: a short tip top-left about every {interval} s (Windowed Fullscreen needed to see it over the game).",
-  "live.hotkey_line": "Live Coach on/off: {key}",
+  "live.hotkey_line": "Live Coach on/off: {combo}",
   "live.stopped": "Live Coach stopped: {reason}",
   "live.need_ack": "Live Coach is off. Turn it on first: Settings → Live Coach (read the limits and tick the box).",
   "live.need_gemini": "Live Coach needs a connected Gemini key (Settings → Gemini AI → Test connection).",

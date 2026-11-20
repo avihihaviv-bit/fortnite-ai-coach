@@ -578,7 +578,7 @@
   "live.turn_off": "מאמן לייב: כבה",
   "live.tips_count": "{n} טיפים",
   "live.info": "מאמן לייב: טיפ קצר בפינה השמאלית העליונה בערך כל {interval} שניות (צריך Windowed Fullscreen כדי לראות אותו מעל המשחק).",
-  "live.hotkey_line": "הפעלה/כיבוי מאמן לייב: {key}",
+  "live.hotkey_line": "הפעלה/כיבוי מאמן לייב: {combo}",
   "live.stopped": "מאמן הלייב נעצר: {reason}",
   "live.need_ack": "מאמן הלייב כבוי. הפעל אותו קודם: הגדרות ← מאמן לייב (קרא את המגבלות וסמן את התיבה).",
   "live.need_gemini": "מאמן הלייב צריך מפתח Gemini מחובר (הגדרות ← Gemini AI ← בדוק חיבור).",

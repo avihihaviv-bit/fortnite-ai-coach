@@ -226,3 +226,15 @@ def test_clip_library_open_and_batch(win, sample_video, tmp_path):
     assert w.current_key == "gameplay"
     qtbot.waitUntil(lambda: w.pages["gameplay"].current is not None, timeout=20000)
     assert Path(w.pages["gameplay"].current.meta.path).name == "clip_a.mp4"
+
+
+def test_record_card_renders_with_windows_hotkeys(win, monkeypatch):
+    """The hotkey lines only render on Windows; render them here too."""
+    from fortnite_coach.ui.pages import analysis_page
+
+    w, client, qtbot = win
+    monkeypatch.setattr(analysis_page, "hotkeys_supported", lambda: True)
+    page = w.pages["gameplay"]
+    page.start_mode.setCurrentIndex(page.start_mode.findData("record_live"))
+    page._render_recording()
+    assert "Ctrl+Shift+F11" in page.rec_info.text()

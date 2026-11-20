@@ -391,7 +391,7 @@ class AnalysisPage(BasePage):
         if hotkeys_supported() and rec.hotkeys_enabled:
             lines.append(tr("rec.hotkeys", start=rec.hotkey_start, stop=rec.hotkey_stop))
             if live is not None:
-                lines.append(tr("live.hotkey_line", key=settings.live.hotkey))
+                lines.append(tr("live.hotkey_line", combo=settings.live.hotkey))
             if rc.hotkey_errors:
                 lines.append("⚠  " + tr("rec.hotkey_taken", keys=", ".join(rc.hotkey_errors)))
         elif not hotkeys_supported():
