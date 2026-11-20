@@ -17,6 +17,7 @@ class ConnectionTestResult:
     error_key: str | None = None
     tested_at: str = ""
     picked_model: str | None = None  # set when the app chose a model because the user never picked one
+    detail: str = ""                 # Google's own error text (key redacted), shown to the user
 
 
 def test_connection(service: GeminiService, *, may_pick: bool = False) -> ConnectionTestResult:
@@ -32,9 +33,27 @@ def test_connection(service: GeminiService, *, may_pick: bool = False) -> Connec
     usable = usable_models(names)
     if not usable:
         return ConnectionTestResult(False, error_key="gemini.err_no_free_model", tested_at=now)
-    if service.model not in usable:
-        if may_pick:
-            service.model = usable[0]
-            return ConnectionTestResult(True, usable, None, now, picked_model=usable[0])
-        return ConnectionTestResult(False, usable, "gemini.err_model", now)
-    return ConnectionTestResult(True, usable, None, now)
+    # Listed is not enough: Google lists retired models but refuses them for new keys. Each candidate
+    # gets a tiny real request. If the user never chose a model, try the best ones first and keep the
+    # first that works; a model the user chose is only tested, never replaced.
+    if may_pick:
+        candidates = usable
+    else:
+        candidates = [service.model] if service.model in usable else []
+        if not candidates:
+            return ConnectionTestResult(False, usable, "gemini.err_model", now)
+    from fortnite_coach.logging_setup import redact
+
+    detail = ""
+    for model in candidates:
+        try:
+            service.ping(model)
+        except GeminiError as e:
+            detail = redact(str(e))[:400]
+            if e.i18n_key in ("gemini.err_model", "gemini.err_bad_request"):
+                continue  # this model is not usable for this key: try the next one
+            return ConnectionTestResult(False, usable, e.i18n_key, now, detail=detail)
+        picked = model if model != service.model else None
+        service.model = model
+        return ConnectionTestResult(True, usable, None, now, picked_model=picked)
+    return ConnectionTestResult(False, usable, "gemini.err_model", now, detail=detail)

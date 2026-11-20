@@ -125,3 +125,24 @@ def test_retired_default_is_replaced_only_if_user_never_chose():
     assert r.ok and r.picked_model == "gemini-3-flash"
     r = run_connection_test(service(FakeClient(models=("gemini-3-flash",))), may_pick=False)
     assert not r.ok and r.error_key == "gemini.err_model" and r.available_models == ["gemini-3-flash"]
+
+
+def test_listed_but_retired_model_is_skipped_by_real_ping():
+    """Google lists gemini-2.5-flash but refuses it for new keys: the test must find a model that works."""
+    c = FakeClient(models=("gemini-2.5-flash", "gemini-3-flash"), blocked_models={"gemini-3-flash"})
+    r = run_connection_test(service(c), may_pick=True)
+    assert r.ok and r.picked_model is None and c.pings == ["gemini-2.5-flash"]  # 3 blocked -> next one works
+    c = FakeClient(models=("gemini-2.5-flash", "gemini-2.5-flash-lite"), blocked_models={"gemini-2.5-flash"})
+    r = run_connection_test(service(c), may_pick=True)
+    assert r.ok and r.picked_model == "gemini-2.5-flash-lite"
+
+
+def test_chosen_model_that_is_blocked_reports_google_text():
+    c = FakeClient(models=("gemini-2.5-flash",), blocked_models={"gemini-2.5-flash"})
+    r = run_connection_test(service(c), may_pick=False)
+    assert not r.ok and r.error_key == "gemini.err_model" and "no longer available to new users" in r.detail
+
+
+def test_file_not_found_is_not_reported_as_model_problem():
+    assert classify(FakeAPIError(404, "File files/abc is not found or not accessible")).i18n_key == "gemini.err_file"
+    assert classify(FakeAPIError(404, "models/gemini-x is not found for API version v1beta")).i18n_key == "gemini.err_model"

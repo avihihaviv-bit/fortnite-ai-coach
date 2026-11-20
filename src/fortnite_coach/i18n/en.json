@@ -266,7 +266,7 @@
   "gemini.err_key": "The API key was rejected. Check it in Google AI Studio and paste it again.",
   "gemini.err_quota_daily": "The free daily quota for this model is used up. Try again tomorrow (the app never switches to a paid model).",
   "gemini.err_rate_limit": "Too many requests per minute (free tier). The app waited and retried, but Google still refused. Try again in a minute.",
-  "gemini.err_model": "This model is not available for your key. Run Test connection and pick an available model.",
+  "gemini.err_model": "This model is not usable for your key (Google may have retired it for new users). Click Test connection: the app will pick a model that works.",
   "gemini.err_no_free_model": "Your key works, but none of the free-tier Flash models is available for it.",
   "gemini.err_blocked": "Gemini returned no answer for this part (blocked or empty).",
   "gemini.err_bad_request": "Gemini rejected the request.",
@@ -514,5 +514,7 @@
   "rec.preparing": "Preparing the recording (joining parts)…",
   "rec.saved_parts": "Saved in {n} parts in {folder}. They are joined into one video when you click Load.",
   "rec.interrupted": "Capture was cut off {n} time(s) (e.g. when Fortnite switched display mode) and resumed automatically. Short gaps are possible. Tip: start recording when Fortnite is already in the lobby.",
-  "video.err_merge": "The recording parts could not be joined. The parts are kept in the recordings folder."
+  "video.err_merge": "The recording parts could not be joined. The parts are kept in the recordings folder.",
+  "gemini.details": "Google said: {text}",
+  "gemini.err_file": "The uploaded video is no longer available at Google. Analyze again to re-upload it."
 }

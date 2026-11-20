@@ -33,7 +33,10 @@ def segment_json(start="00:05", skill="editing", good=True, mistake=True, score=
 
 
 class FakeClient:
-    def __init__(self, models=("gemini-2.5-flash", "gemini-2.5-flash-lite"), responses=None, list_error=None):
+    def __init__(self, models=("gemini-2.5-flash", "gemini-2.5-flash-lite"), responses=None, list_error=None,
+                 blocked_models=()):
+        self.blocked_models = set(blocked_models)  # listed, but refused for this key (like retired models)
+        self.pings = []
         self.uploads = 0
         self.generate_calls = []
         self._responses = list(responses or [])
@@ -55,6 +58,11 @@ class FakeClient:
                                state=SimpleNamespace(name="PROCESSING"))
 
     def _generate(self, model, contents, config):
+        if model in self.blocked_models:
+            raise FakeAPIError(404, f"models/{model} is no longer available to new users. TEST DATA")
+        if isinstance(contents, str) and "single word OK" in contents:  # connection-test ping
+            self.pings.append(model)
+            return SimpleNamespace(text="OK", usage_metadata=None)
         self.generate_calls.append((model, contents, config))
         r = self._responses.pop(0) if self._responses else segment_json()
         if isinstance(r, Exception):

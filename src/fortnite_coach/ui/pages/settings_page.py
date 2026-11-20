@@ -331,6 +331,8 @@ class SettingsPage(BasePage):
         if g.last_test_at:
             res = tr("apikey.test_ok", at=g.last_test_at.replace("T", " ")[:16]) if g.last_test_ok else \
                 "⚠  " + tr(g.last_test_error or "gemini.error")
+            if not g.last_test_ok and g.last_test_detail:
+                res += "\n" + tr("gemini.details", text=g.last_test_detail)
             if g.last_test_ok and getattr(self, "model_picked_notice", None):
                 res += "  " + tr("apikey.model_picked", model=self.model_picked_notice)
         else:

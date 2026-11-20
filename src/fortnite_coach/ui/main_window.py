@@ -147,6 +147,7 @@ class MainWindow(QMainWindow):
         def done(result):
             g = self.settings.gemini.model_copy()
             g.last_test_ok, g.last_test_at, g.last_test_error = result.ok, result.tested_at, result.error_key
+            g.last_test_detail = result.detail
             if result.available_models:
                 g.available_models = result.available_models
             if result.picked_model:

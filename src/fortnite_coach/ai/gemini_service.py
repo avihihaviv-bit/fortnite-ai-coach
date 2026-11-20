@@ -53,7 +53,11 @@ def classify(exc: Exception) -> ClassifiedError:
         return ClassifiedError("gemini.err_rate_limit", True, delay)
     if code in (401, 403) or "api key not valid" in low or "api_key_invalid" in low or "permission_denied" in low:
         return ClassifiedError("gemini.err_key", False)
-    if code == 404 or "not found" in low and "model" in low:
+    if code == 404 or "not_found" in low or "not found" in low:
+        if "file" in low and "model" not in low:
+            return ClassifiedError("gemini.err_file", False)  # uploaded video expired / missing
+        return ClassifiedError("gemini.err_model", False)  # e.g. "no longer available to new users"
+    if "no longer available" in low:
         return ClassifiedError("gemini.err_model", False)
     if code == 400 and ("safety" in low or "blocked" in low):
         return ClassifiedError("gemini.err_blocked", False)
@@ -127,12 +131,25 @@ class GeminiService:
                 raise
             except Exception as exc:  # SDK / network errors
                 c = classify(exc)
-                log.warning("Gemini call failed (%s, retryable=%s): %s", c.i18n_key, c.retryable, type(exc).__name__)
+                from fortnite_coach.logging_setup import redact
+
+                log.warning("Gemini call failed (%s, retryable=%s): %s: %s", c.i18n_key, c.retryable,
+                            type(exc).__name__, redact(str(exc))[:500])
                 if not c.retryable or attempt >= self.max_retries:
                     raise GeminiError(str(exc)[:300], i18n_key=c.i18n_key) from exc
                 delay = min(MAX_RETRY_DELAY_S, c.delay_s if c.delay_s else 2.0 * (2 ** attempt))
                 attempt += 1
                 self._sleep(delay)
+
+    PING = "Reply with the single word OK."
+
+    def ping(self, model: str | None = None) -> None:
+        """A tiny real generation request: proves the model is usable for this key, not just listed."""
+        from google.genai import types
+
+        target = model or self.model
+        self._with_retries(lambda: self.client.models.generate_content(
+            model=target, contents=self.PING, config=types.GenerateContentConfig(max_output_tokens=8, temperature=0)))
 
     def list_models(self) -> list[str]:
         def call():

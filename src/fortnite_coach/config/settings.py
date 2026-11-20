@@ -39,6 +39,7 @@ class GeminiSettings(BaseModel):
     last_test_ok: bool | None = None
     last_test_at: str | None = None
     last_test_error: str | None = None
+    last_test_detail: str = ""
     available_models: list[str] = Field(default_factory=list)
     model_user_chosen: bool = False  # True once the user picks a model; then it is never auto-replaced
 

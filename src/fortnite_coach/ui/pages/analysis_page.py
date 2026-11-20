@@ -437,6 +437,7 @@ class AnalysisPage(BasePage):
         if self.analyze_block_reason() is not None:
             return
         self.job_error = None
+        self.job_detail = ""
         if process_guard.is_fortnite_running():  # one check, on click only
             self.job_error = "analysis.fortnite_running"
             self.refresh_status()
@@ -507,6 +508,18 @@ class AnalysisPage(BasePage):
             self._limit_params = err.params
         else:
             self.job_error = getattr(err, "i18n_key", "error.generic")
+            from fortnite_coach.logging_setup import redact
+
+            self.job_detail = redact(str(err))[:400]
+            if self.job_error == "gemini.err_model":  # the tested model stopped working: ask for a new test
+                st = self.ctx.settings()
+                g = st.gemini.model_copy()
+                g.last_test_ok, g.last_test_error, g.last_test_detail = None, None, ""
+                st.gemini = g
+                self.ctx.save_settings(st)
+                win = self.window()
+                if hasattr(win, "refresh_gemini_status"):
+                    win.refresh_gemini_status()
         self.ctx.data_changed()
         self.refresh_status()
 
@@ -556,6 +569,8 @@ class AnalysisPage(BasePage):
         if self.job_error:
             params = getattr(self, "_limit_params", {}) if self.job_error == "error.usage_limit_detail" else {}
             text = "⚠  " + tr(self.job_error, **params) + ("\n" + text if reason else "")
+            if getattr(self, "job_detail", ""):
+                text += "\n" + tr("gemini.details", text=self.job_detail)
         self.analyze_reason.setText(text)
         self.cancel_btn.setText(tr("common.cancel"))
 
