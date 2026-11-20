@@ -89,34 +89,116 @@ def _test_plan(tmp_path, seconds=None):
     return build_command(find_ffmpeg(), "test", "libx264", s, new_output_path(tmp_path / "rec"), test_duration_s=seconds)
 
 
+def _factory(tmp_path, seconds=None, size="640x360"):
+    """Plan factory like the controller's: part N -> <base>_partN.mp4 (synthetic test source)."""
+    base = new_output_path(tmp_path / "rec")
+    s = RecordingSettings(fps=30)
+
+    def make(part):
+        plan = build_command(find_ffmpeg(), "test", "libx264", s, base.with_name(f"{base.stem}_part{part}.mp4"),
+                             test_duration_s=seconds)
+        if size != "640x360":
+            plan.args[plan.args.index("testsrc2=size=640x360:rate=30")] = f"testsrc2=size={size}:rate=30"
+        return plan
+
+    return make
+
+
+def _wait(cond, timeout=20):
+    deadline = time.time() + timeout
+    while not cond() and time.time() < deadline:
+        time.sleep(0.2)
+
+
 def test_recorder_start_stop_produces_playable_file(tmp_path):
     rec = Recorder(tmp_path / "logs")
-    plan = _test_plan(tmp_path)
-    rec.start(plan)
-    rec.start(plan)  # second press does nothing
+    rec.start(_factory(tmp_path))
+    rec.start(_factory(tmp_path))  # second press does nothing
     assert rec.is_recording
     time.sleep(2.5)
-    out = rec.stop()
-    assert rec.state is RecorderState.IDLE and out == plan.output
-    meta = probe(out)
+    parts = rec.stop()
+    assert rec.state is RecorderState.IDLE and len(parts) == 1 and parts[0].name.endswith("_part1.mp4")
+    meta = probe(parts[0])
     assert meta.duration_s > 1.0 and meta.width == 640
 
 
-def test_recorder_detects_process_exit(tmp_path):
+def test_capture_cut_off_resumes_automatically(tmp_path):
+    """Simulates Windows cutting off capture (ffmpeg exits by itself): recording must continue."""
     rec = Recorder(tmp_path / "logs")
-    rec.start(_test_plan(tmp_path, seconds=1))
-    deadline = time.time() + 15
-    while rec.poll() is RecorderState.RECORDING and time.time() < deadline:
-        time.sleep(0.2)
-    assert rec.state is RecorderState.IDLE
+    rec.start(_factory(tmp_path, seconds=1.5))  # every part ends by itself after 1.5 s
+    _wait(lambda: (rec.poll() and False) or rec.restarts >= 2, timeout=30)
+    assert rec.is_recording and rec.restarts >= 2  # still recording: no user action needed
+    parts = rec.stop()
+    assert len(parts) >= 2 and all(probe(p).duration_s > 0.5 for p in parts)
+    assert "restarted automatically" in (tmp_path / "logs" / "recorder.log").read_text()
 
 
-def test_recorder_reports_ffmpeg_failure(tmp_path):
+def test_gives_up_after_repeated_instant_failures_but_keeps_parts(tmp_path, monkeypatch):
+    from fortnite_coach.recording import recorder as r
+
+    monkeypatch.setattr(r, "FAST_FAIL_S", 10.0)   # every part counts as a fast failure
+    monkeypatch.setattr(r, "MAX_FAST_FAILS", 2)
+    monkeypatch.setattr(r, "MAX_BACKOFF_S", 0.0)
     rec = Recorder(tmp_path / "logs")
-    plan = _test_plan(tmp_path)
-    bad = plan.__class__(args=[*plan.args[:-1], "/nonexistent_dir/x.mp4"], output=plan.output, encoder="x", source="test")
-    rec.start(bad)
-    deadline = time.time() + 15
-    while rec.poll() is RecorderState.RECORDING and time.time() < deadline:
-        time.sleep(0.2)
-    assert rec.state is RecorderState.FAILED and rec.error
+    rec.start(_factory(tmp_path, seconds=1))
+    _wait(lambda: rec.poll() is RecorderState.FAILED, timeout=30)
+    assert rec.state is RecorderState.FAILED and len(rec.parts) >= 1  # what was captured survives
+
+
+def test_merge_same_resolution_is_lossless_concat(tmp_path):
+    from fortnite_coach.recording.merge import merge_parts
+
+    rec = Recorder(tmp_path / "logs")
+    rec.start(_factory(tmp_path, seconds=1.5))
+    _wait(lambda: (rec.poll() and False) or len(rec.parts) >= 2, timeout=30)
+    parts = rec.stop()
+    total = sum(probe(p).duration_s for p in parts)
+    out = merge_parts(parts)
+    assert out.name.endswith(".mp4") and "_part" not in out.name
+    assert abs(probe(out).duration_s - total) < 1.0
+    assert not any(p.exists() for p in parts)  # parts removed only after a verified merge
+
+
+def test_merge_different_resolutions_reencodes(tmp_path):
+    from fortnite_coach.recording.merge import merge_parts
+
+    a = Recorder(tmp_path / "a")
+    a.start(_factory(tmp_path / "x", seconds=1.2))
+    _wait(lambda: (a.poll() and False) or len(a.parts) >= 1, timeout=20)
+    p1 = a.stop()[0]
+    b = Recorder(tmp_path / "b")
+    b.start(_factory(tmp_path / "y", seconds=1.2, size="320x180"))
+    _wait(lambda: (b.poll() and False) or len(b.parts) >= 1, timeout=20)
+    p2 = b.stop()[0]
+    p2 = p2.rename(p1.with_name(p1.stem.replace("_part1", "_part2") + ".mp4"))
+    out = merge_parts([p1, p2])
+    m = probe(out)
+    assert (m.width, m.height) == (640, 360) and m.duration_s > 1.5
+
+
+def test_merge_single_part_is_renamed(tmp_path):
+    from fortnite_coach.recording.merge import merge_parts
+
+    rec = Recorder(tmp_path / "logs")
+    rec.start(_factory(tmp_path))
+    time.sleep(1.5)
+    part = rec.stop()[0]
+    out = merge_parts([part])
+    assert out.exists() and not part.exists() and "_part" not in out.name
+
+
+def test_recorder_reports_ffmpeg_failure(tmp_path, monkeypatch):
+    from fortnite_coach.recording import recorder as r
+
+    monkeypatch.setattr(r, "MAX_FAST_FAILS", 2)
+    monkeypatch.setattr(r, "MAX_BACKOFF_S", 0.0)
+    rec = Recorder(tmp_path / "logs")
+    good = _factory(tmp_path)
+
+    def broken(part):
+        plan = good(part)
+        return plan.__class__(args=[*plan.args[:-1], "/nonexistent_dir/x.mp4"], output=plan.output, encoder="x", source="test")
+
+    rec.start(broken)
+    _wait(lambda: rec.poll() is RecorderState.FAILED, timeout=20)
+    assert rec.state is RecorderState.FAILED and rec.error and rec.parts == []

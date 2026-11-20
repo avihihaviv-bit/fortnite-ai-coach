@@ -31,5 +31,9 @@ Recording **always** costs some performance. With NVENC and native resolution it
   - If another program already uses the same combination, registration fails. Pick a different combination.
   - A combination must include Ctrl/Alt/Shift, so it doesn't take over a plain game key.
 
+## When the capture gets cut off
+When Fortnite opens or switches display mode, Windows cuts off screen capture for a moment (`DXGI_ERROR_ACCESS_LOST`). The app **resumes automatically** within about a second and keeps every part. When you click "Load this recording", the parts are joined into a single video. Short gaps are possible.
+**For the most stable recording:** open Fortnite, wait in the lobby, and only then press `Ctrl+Shift+F9`.
+
 ## After recording
 The file is **not** processed automatically, because you may still be in a match. A "Load this recording" button appears. Click it once you've finished playing.

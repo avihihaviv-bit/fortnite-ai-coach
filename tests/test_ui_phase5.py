@@ -145,7 +145,7 @@ def test_record_from_app_then_load(win, qtbot):
     done = []
     rc.finished.connect(done.append)
     rc.stop()
-    assert done and done[0].endswith(".mp4")
+    assert done and done[0][0].endswith("_part1.mp4")
     assert not win.sidebar.rec_pill.isVisibleTo(win.sidebar)
     page = win.pages["gameplay"]
     assert page.rec_load.isVisibleTo(page)  # not auto-processed; user loads it
@@ -180,3 +180,20 @@ def test_hebrew_no_key_message(win):
     assert "מפתח API לא הוגדר" in win.sidebar.status.text()
     assert "מפתח Gemini API לא הוגדר" in win.pages["gameplay"].analyze_reason.text() or \
         win.pages["gameplay"].analyze_block_reason() == "analysis.need_video"
+
+
+def test_recording_survives_capture_cut_off_and_loads_as_one_video(win, qtbot):
+    """Windows cutting off capture (e.g. Fortnite switching display mode) must not lose the recording."""
+    rc = win.recording
+    rc.test_part_seconds = 1.5  # each synthetic part ends by itself, like a lost capture session
+    assert rc.start()
+    qtbot.waitUntil(lambda: rc.recorder.restarts >= 2, timeout=30000)
+    assert rc.is_recording and win.sidebar.rec_pill.isVisibleTo(win.sidebar)
+    page = win.pages["gameplay"]
+    assert "resumed automatically" in page.rec_info.text()
+    rc.stop()
+    assert page._last_recording and len(page._last_recording) >= 2
+    assert "parts" in page.rec_info.text()
+    page.rec_load.click()
+    qtbot.waitUntil(lambda: page.current is not None and not page.loading, timeout=60000)
+    assert "_part" not in page.current.meta.path and page.current.meta.duration_s > 2.5

@@ -80,7 +80,7 @@ class AnalysisPage(BasePage):
         self.rec_start.clicked.connect(self._start_recording)
         self.rec_stop.clicked.connect(ctx.recording.stop)
         self.rec_load = QPushButton()
-        self.rec_load.clicked.connect(lambda: self.load_path(self._last_recording))
+        self.rec_load.clicked.connect(self.load_last_recording)
         rec_btns.addWidget(self.rec_start)
         rec_btns.addWidget(self.rec_stop)
         rec_btns.addWidget(self.rec_load)
@@ -217,8 +217,10 @@ class AnalysisPage(BasePage):
         rc.capabilities_ready.connect(lambda _c: self._render_recording())
         rc.finished.connect(self._on_recording_finished)
         rc.failed.connect(self._on_recording_failed)
+        rc.interrupted.connect(lambda _n: self._render_recording())
         self._rec_error: str | None = None
-        self._last_recording: str | None = None
+        self._last_recording: list[str] | None = None  # parts of the last recording (joined on load)
+        self._last_restarts = 0
         self.finish()
         self.refresh_recent()
 
@@ -235,11 +237,36 @@ class AnalysisPage(BasePage):
         self.ctx.recording.start()
         self._render_recording()
 
-    def _on_recording_finished(self, path: str) -> None:
+    def _on_recording_finished(self, parts) -> None:
         # Not processed automatically: the player may still be in a match. The user loads it when done.
         self._rec_error = None
-        self._last_recording = path
+        self._last_recording = [parts] if isinstance(parts, str) else list(parts)
+        self._last_restarts = self.ctx.recording.recorder.restarts
         self._render_recording()
+
+    def load_last_recording(self) -> None:
+        """Join the parts (only now, after the game) and import the result."""
+        from fortnite_coach.recording.merge import merge_parts
+
+        parts = self._last_recording or []
+        if self.loading or not parts:
+            return
+        self.loading, self.error_key = True, None
+        self.import_status.setText(tr("rec.preparing"))
+        self.import_btn.setEnabled(False)
+        s = self.ctx.settings()
+
+        def done(path):
+            self.loading = False
+            self._last_recording = [str(path)]
+            self.load_path(str(path))
+
+        def failed(err):
+            self.loading = False
+            self.error_key = getattr(err, "i18n_key", "video.err_merge")
+            self._render_import()
+
+        run_task(lambda: merge_parts(parts, ffmpeg=s.ffmpeg_path, ffprobe=s.ffprobe_path), done, failed)
 
     def _on_recording_failed(self, msg: str) -> None:
         self._rec_error = msg
@@ -263,7 +290,12 @@ class AnalysisPage(BasePage):
         self.rec_load.setVisible(bool(self._last_recording) and not rc.is_recording)
         lines: list[str] = []
         if self._last_recording and not rc.is_recording:
-            lines.append(tr("rec.saved", path=self._last_recording))
+            folder = str(Path(self._last_recording[0]).parent)
+            lines.append(tr("rec.saved_parts", n=len(self._last_recording), folder=folder)
+                         if len(self._last_recording) > 1 else tr("rec.saved", path=self._last_recording[0]))
+        restarts = rc.recorder.restarts if rc.is_recording else self._last_restarts
+        if restarts:
+            lines.append("⚠  " + tr("rec.interrupted", n=restarts))
         if rc.detecting:
             lines.append(tr("rec.detecting"))
         elif rc.caps_error:

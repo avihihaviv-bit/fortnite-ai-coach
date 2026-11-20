@@ -19,7 +19,8 @@ from fortnite_coach.workers.task import run_task
 class RecordingController(QObject):
     state_changed = Signal(str)          # RecorderState value
     tick = Signal(float)                 # elapsed seconds while recording
-    finished = Signal(str)               # path of the finished recording
+    finished = Signal(object)            # list[str]: parts of the finished recording (joined later)
+    interrupted = Signal(int)            # capture was cut off and resumed automatically (restart count)
     failed = Signal(str)                 # i18n key or error text
     capabilities_ready = Signal(object)  # Capabilities | None
 
@@ -32,6 +33,8 @@ class RecordingController(QObject):
         self.detecting = False
         self.hotkey_errors: list[str] = []  # combinations Windows refused (used by another program)
         self._source_override = source_override  # "test" in automated tests only
+        self.test_part_seconds: float | None = None  # tests only: make each synthetic part end by itself
+        self._seen_restarts = 0
         self._timer = QTimer(self)
         self._timer.setInterval(500)
         self._timer.timeout.connect(self._on_tick)
@@ -82,8 +85,14 @@ class RecordingController(QObject):
         try:
             ffmpeg = find_ffmpeg(app_settings.ffmpeg_path)
             folder = Path(rec.output_dir) if rec.output_dir else default_output_dir()
-            plan = build_command(ffmpeg, source, encoder, rec, new_output_path(folder))
-            self.recorder.start(plan)
+            base = new_output_path(folder)
+
+            def plan_for(part: int):  # each automatic restart writes the next part
+                return build_command(ffmpeg, source, encoder, rec, base.with_name(f"{base.stem}_part{part}.mp4"),
+                                     test_duration_s=self.test_part_seconds)
+
+            self.recorder.start(plan_for)
+            self._seen_restarts = 0
         except (CoachError, OSError, ValueError) as e:
             self.failed.emit(getattr(e, "i18n_key", "rec.err_start"))
             return False
@@ -95,10 +104,10 @@ class RecordingController(QObject):
         if not self.is_recording:
             return
         self._timer.stop()
-        out = self.recorder.stop()
+        parts = self.recorder.stop()
         self.state_changed.emit(RecorderState.IDLE.value)
-        if out:
-            self.finished.emit(str(out))
+        if parts:
+            self.finished.emit([str(p) for p in parts])
         else:
             self.failed.emit("rec.err_empty")
 
@@ -107,12 +116,16 @@ class RecordingController(QObject):
 
     def _on_tick(self) -> None:
         state = self.recorder.poll()
+        if self.recorder.restarts != self._seen_restarts:
+            self._seen_restarts = self.recorder.restarts
+            self.interrupted.emit(self._seen_restarts)
         if state is RecorderState.RECORDING:
             self.tick.emit(self.recorder.elapsed_s)
             return
         self._timer.stop()
         self.state_changed.emit(state.value)
+        parts = list(self.recorder.parts)
+        if parts:  # keep whatever was captured, even if capture finally gave up
+            self.finished.emit([str(p) for p in parts])
         if state is RecorderState.FAILED:
             self.failed.emit(self.recorder.error or "rec.err_start")
-        elif self.recorder.plan and self.recorder.plan.output.is_file():
-            self.finished.emit(str(self.recorder.plan.output))
