@@ -59,6 +59,18 @@ class ParsedItem:
     better_option: str = ""
     why: str = ""
     how_to_practice: str = ""
+    search_query: str = ""
+
+
+def clean_query(q: str | None) -> str:
+    """Keep the AI's search phrase short and plain (it goes into a URL)."""
+    import re
+
+    q = re.sub(r"[^\w\s'+-]", " ", (q or ""), flags=re.UNICODE)
+    q = " ".join(q.split())[:90].strip()
+    if len(q.split()) < 2:
+        return ""
+    return q if q.lower().startswith("fortnite") else f"fortnite {q}"
 
 
 @dataclass
@@ -118,7 +130,8 @@ def validate_segment(result: SegmentResult, index: int, seg_start: float, seg_en
             code=code, skill=m.skill, start_s=t[0], end_s=t[1], what_happened=m.what_happened.strip(),
             evidence=m.evidence.strip(), confidence=_clamp01(m.confidence),
             severity=m.severity if m.severity in _SEVERITIES else "medium",
-            better_option=m.better_option.strip(), why=m.why.strip(), how_to_practice=m.how_to_practice.strip()))
+            better_option=m.better_option.strip(), why=m.why.strip(), how_to_practice=m.how_to_practice.strip(),
+            search_query=clean_query(getattr(m, "search_query", ""))))
     for g in result.good_plays:
         g.skill, g.difficulty, g.code = _norm(g.skill), _norm(g.difficulty), g.code.strip().upper()
         t = _times(g.start, g.end, seg_start, seg_end)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QGridLayout, QHBoxLayout, QLabel, QWidget
 
 from fortnite_coach.core.skills import ALL_SKILLS
@@ -93,6 +94,17 @@ class DashboardPage(BasePage):
         row2.addWidget(self.mistakes_card, 1)
         self.content.addLayout(row2)
 
+        self.search_card = Card()
+        self.search_empty = EmptyState("spark")
+        self.search_list = QLabel()
+        self.search_list.setWordWrap(True)
+        self.search_list.setOpenExternalLinks(True)
+        self.search_list.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
+        self.search_card.body.addWidget(self.search_empty)
+        self.search_card.body.addWidget(self.search_list)
+        self.content.addWidget(self.search_card)
+        self.struggles: list = []
+
         self.recent_card = Card()
         self.recent_empty = EmptyState("history")
         self.recent_list = QLabel()
@@ -107,13 +119,36 @@ class DashboardPage(BasePage):
         self.periods: list = []
         self.finish()
 
-    def refresh(self, stats: DashboardStats, levels=None, recent=None, repeated=None, periods=None) -> None:
+    def refresh(self, stats: DashboardStats, levels=None, recent=None, repeated=None, periods=None,
+                struggles=None, queries=None) -> None:
+        self.struggles = struggles or []
+        self.queries = queries or {}
         self.periods = periods or []
         self.stats = stats
         self.levels = levels
         self.recent = recent or []
         self.repeated = repeated or []
         self.retranslate()
+
+    def _render_search(self) -> None:
+        from html import escape
+
+        from fortnite_coach.coaching.resources import links_html
+        from fortnite_coach.ui.pages.history_page import code_label
+
+        self.search_card.set_title(tr("search.title"), tr("search.subtitle"))
+        self.search_empty.set_text(tr("search.empty_title"), tr("search.empty_text"))
+        items = []
+        for i, sg in enumerate(self.struggles):
+            name = code_label(sg.code, False) if sg.code != "OTHER" else (sg.example[:70] or tr("report.other"))
+            seen = tr("dash.seen_in", n=sg.sessions) if sg.sessions > 1 else tr("search.seen_once")
+            example = f"<br><i style='color:#9CA3AF'>{escape(sg.example[:160])}</i>" if sg.example else ""
+            items.append(f"<b>{i + 1}. {escape(name)}</b> ({tr(f'skill.{sg.skill}')}) · {seen} · "
+                         f"{tr(f'severity.{sg.severity}')}{example}<br>"
+                         f"{links_html(sg.code if sg.code != 'OTHER' else None, sg.skill, tr('learn.search'), sg.query)}")
+        self.search_list.setText("<br><br>".join(items))
+        self.search_list.setVisible(bool(items))
+        self.search_empty.setVisible(not items)
 
     def retranslate(self) -> None:
         super().retranslate()
@@ -141,14 +176,16 @@ class DashboardPage(BasePage):
         self.priorities_empty.set_text(tr("dash.empty_title"), tr("dash.priorities_empty"))
         from fortnite_coach.coaching.resources import links_html
 
-        vids, arts = tr("learn.videos"), tr("learn.articles")
-        prio = [f"{i + 1}. {code_label(r.code, False)} ({tr(f'skill.{r.skill}')}) · {tr('dash.seen_in', n=r.sessions)}"
-                f"<br>&nbsp;&nbsp;&nbsp;{links_html(r.code, r.skill, vids, arts)}"
+        label = tr("learn.search")
+        queries = getattr(self, "queries", {}) or {}
+        prio = [f"<b>{i + 1}. {code_label(r.code, False)}</b> ({tr(f'skill.{r.skill}')}) · {tr('dash.seen_in', n=r.sessions)}"
+                f"<br>{links_html(r.code, r.skill, label, queries.get(r.code))}"
                 for i, r in enumerate(self.repeated[:3])]
         if not prio and st.weakest:
-            prio = [f"1. {tr(f'skill.{st.weakest}')} · {tr('dash.lowest_score')}"
-                    f"<br>&nbsp;&nbsp;&nbsp;{links_html(None, st.weakest, vids, arts)}"]
+            prio = [f"<b>1. {tr(f'skill.{st.weakest}')}</b> · {tr('dash.lowest_score')}"
+                    f"<br>{links_html(None, st.weakest, label)}"]
         self.priorities_list.setOpenExternalLinks(True)
+        self._render_search()
         self.priorities_list.setText("<br>".join(prio))
         self.priorities_list.setVisible(bool(prio))
         self.priorities_empty.setVisible(not prio)

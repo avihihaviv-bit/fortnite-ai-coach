@@ -100,8 +100,23 @@ def google_url(query: str) -> str:
     return "https://www.google.com/search?q=" + quote_plus(query)
 
 
-def links_html(code: str | None, skill: str | None, label_video: str, label_web: str) -> str:
-    q = query_for(code, skill)
+def tiktok_url(query: str) -> str:
+    return "https://www.tiktok.com/search?q=" + quote_plus(query)
+
+
+def best_query(code: str | None, skill: str | None, ai_query: str | None = None) -> str:
+    """The AI's phrase for this exact situation when it gave one, else the curated phrase for the mistake."""
+    return (ai_query or "").strip() or query_for(code, skill)
+
+
+def links_html(code: str | None, skill: str | None, label_search: str, ai_query: str | None = None) -> str:
+    """'Search: «phrase»' + YouTube · TikTok · Google links for the same phrase."""
+    from html import escape
+
+    q = best_query(code, skill, ai_query)
     style = "color:#A78BFA"
-    return (f"<a href='{youtube_url(q)}' style='{style}'>{label_video}</a> &nbsp;·&nbsp; "
-            f"<a href='{google_url(q)}' style='{style}'>{label_web}</a>")
+    # \u2066...\u2069 isolates the English phrase so it reads correctly inside Hebrew (RTL) text
+    return (f"{label_search} <b>\u2066\"{escape(q)}\"\u2069</b><br>"
+            f"<a href='{youtube_url(q)}' style='{style}'>YouTube</a> &nbsp;·&nbsp; "
+            f"<a href='{tiktok_url(q)}' style='{style}'>TikTok</a> &nbsp;·&nbsp; "
+            f"<a href='{google_url(q)}' style='{style}'>Google</a>")

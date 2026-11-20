@@ -110,6 +110,7 @@ class Mistake(Base):
     how_to_practice: Mapped[str] = mapped_column(Text, default="")
     evidence: Mapped[str] = mapped_column(Text, default="")       # what is visible in the video
     confidence: Mapped[float | None] = mapped_column(Float)        # 0..1, from the AI
+    search_query: Mapped[str] = mapped_column(String(120), default="")  # AI's tutorial search phrase for this mistake
 
 
 class TrainingPlan(Base):

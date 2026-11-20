@@ -20,7 +20,8 @@ def segment_json(start="00:05", skill="editing", good=True, mistake=True, score=
             "code": "EDIT_EXPOSED_AFTER", "skill": skill, "severity": "high", "start": start, "end": start,
             "what_happened": "TEST DATA: stayed in the open edit", "better_option": "TEST DATA: reset the edit",
             "why": "TEST DATA: took free damage", "how_to_practice": "TEST DATA: edit course, reset every edit",
-            "evidence": "TEST DATA: health bar drops after the edit", "confidence": 0.8}] if mistake else [],
+            "evidence": "TEST DATA: health bar drops after the edit", "confidence": 0.8,
+            "search_query": "fortnite how to reset edits in box fights TEST DATA"}] if mistake else [],
         "good_plays": [{
             "code": "EDIT_HARD_FAST", "skill": "editing", "difficulty": "hard", "start": start, "end": start,
             "what_happened": "TEST DATA: fast triple edit into a shot", "evidence": "TEST DATA: hit marker visible",

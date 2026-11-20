@@ -238,3 +238,85 @@ def test_record_card_renders_with_windows_hotkeys(win, monkeypatch):
     page.start_mode.setCurrentIndex(page.start_mode.findData("record_live"))
     page._render_recording()
     assert "Ctrl+Shift+F11" in page.rec_info.text()
+
+
+# ---------------------------------------------------------------- what to search
+def test_clean_query():
+    from fortnite_coach.ai.gemini_response_parser import clean_query
+
+    assert clean_query("how to pre fire <script>") == "fortnite how to pre fire script"
+    assert clean_query("Fortnite tarping tutorial") == "Fortnite tarping tutorial"
+    assert clean_query("x") == ""
+    assert len(clean_query("fortnite " + "word " * 50)) <= 90
+
+
+def test_links_use_ai_phrase_for_all_three_sites():
+    from fortnite_coach.coaching.resources import links_html
+
+    html = links_html("EDIT_SLOW", "editing", "Search:", "fortnite double edit pre fire box fight")
+    assert "fortnite double edit pre fire box fight" in html
+    for host in ("youtube.com/results", "tiktok.com/search", "google.com/search"):
+        assert host in html
+    assert "fortnite+double+edit+pre+fire+box+fight" in html
+    fallback = links_html("EDIT_SLOW", "editing", "Search:", "")
+    assert QUERIES["EDIT_SLOW"] in fallback  # curated phrase when the AI gave none
+
+
+def test_struggles_ranked_and_shown_on_dashboard(win, sample_video):
+    from fortnite_coach.db.repositories import report_repo
+    from tests.test_ui_analysis import load
+
+    w, client, qtbot = win
+    client._responses = [segment_json("00:02")]
+    connect(w, qtbot)
+    page = load(w, qtbot, sample_video)
+    page.confirm = lambda *a: True
+    page.start_analysis()
+    qtbot.waitUntil(lambda: page.job is not None and not page.job.running, timeout=60000)
+    st = report_repo.struggles(w.db)
+    assert st and st[0].code == "EDIT_EXPOSED_AFTER"
+    assert st[0].query == "fortnite how to reset edits in box fights TEST DATA"
+    dash = w.pages["dashboard"]
+    assert dash.search_list.isVisible() or not dash.isVisible()
+    text = dash.search_list.text()
+    assert "tiktok.com/search?q=fortnite+how+to+reset+edits" in text
+    assert "TEST DATA: stayed in the open edit" in text  # the player's own moment
+    assert report_repo.latest_search_queries(w.db)["EDIT_EXPOSED_AFTER"].startswith("fortnite how to reset")
+
+
+def test_live_stops_when_turned_off_in_settings(win):
+    w, client, qtbot = win
+    connect(w, qtbot)
+    _enable_live(w)
+    assert w.live.start()
+    w.settings.live.acknowledged = False
+    w.live.request_now()
+    assert not w.live.active and w.live.last_error == "live.need_ack"
+
+
+def test_capture_falls_back_to_gdi_after_fast_failures(tmp_path):
+    from fortnite_coach.live.capture import FrameCapture
+
+    cap = FrameCapture("ffmpeg-does-not-matter", tmp_path / "f")
+
+    class Dead:
+        def poll(self):
+            return 1
+
+    starts = []
+    cap.start = lambda: (starts.append(cap.source), setattr(cap, "_started", __import__("time").monotonic()))
+    for _ in range(3):
+        cap._proc = Dead()
+        cap._started = __import__("time").monotonic()
+        cap.ensure_running()
+    assert cap.source == "gdigrab" and starts[-1] == "gdigrab"
+
+
+def test_videos_root_scanned_shallow(tmp_path):
+    videos = tmp_path / "Videos"
+    deep = videos / "Movies" / "x"
+    deep.mkdir(parents=True)
+    (videos / "top.mp4").write_bytes(b"\0" * 60_000)
+    (deep / "movie.mp4").write_bytes(b"\0" * 60_000)
+    found = clip_lib.scan([videos], shallow={str(videos)})
+    assert [c.name for c in found] == ["top.mp4"]

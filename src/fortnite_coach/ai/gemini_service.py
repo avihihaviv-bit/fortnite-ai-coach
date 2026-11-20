@@ -167,6 +167,11 @@ class GeminiService:
                    media_resolution=types.MediaResolution.MEDIA_RESOLUTION_LOW)
         if self.model.startswith("gemini-2.5") and "pro" not in self.model:
             cfg["thinking_config"] = types.ThinkingConfig(thinking_budget=0)  # lower latency
+        else:
+            # models that always think count thinking in the output budget: leave room for the actual tip
+            cfg["max_output_tokens"] = 1024
+            if self.model.startswith("gemini-3"):
+                cfg["thinking_config"] = types.ThinkingConfig(thinking_level="low")
         parts = [types.Part(inline_data=types.Blob(data=f, mime_type="image/jpeg")) for f in frames]
         parts.append(types.Part(text=prompt))
         contents = [types.Content(role="user", parts=parts)]

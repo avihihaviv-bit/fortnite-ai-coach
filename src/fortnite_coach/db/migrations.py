@@ -43,11 +43,17 @@ def _v4_exercise_template(conn: Connection) -> None:
         conn.execute(text("ALTER TABLE exercises ADD COLUMN template_id VARCHAR(64)"))
 
 
+def _v5_mistake_search_query(conn: Connection) -> None:
+    if "search_query" not in _columns(conn, "mistakes"):
+        conn.execute(text("ALTER TABLE mistakes ADD COLUMN search_query VARCHAR(120) DEFAULT ''"))
+
+
 MIGRATIONS: list[tuple[int, Callable[[Connection], None]]] = [
     (1, _v1_initial),
     (2, _v2_knowledge_keys),
     (3, _v3_analysis_tables),
     (4, _v4_exercise_template),
+    (5, _v5_mistake_search_query),
 ]
 
 LATEST_VERSION = MIGRATIONS[-1][0]

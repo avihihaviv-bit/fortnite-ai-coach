@@ -51,6 +51,13 @@ def clean_tip(text: str) -> str | None:
     return t[:160]
 
 
+def _mtime(p: Path) -> float:
+    try:
+        return p.stat().st_mtime
+    except OSError:
+        return 0.0
+
+
 class LiveCoach(QObject):
     tip = Signal(str)
     state_changed = Signal(bool)
@@ -73,6 +80,9 @@ class LiveCoach(QObject):
         self._started_at = 0.0
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._on_timer)
+        self._watch = QTimer(self)  # restarts the screenshot capture quickly if Windows cut it off
+        self._watch.setInterval(2000)
+        self._watch.timeout.connect(lambda: self.capture.ensure_running() if self.capture else None)
 
     @property
     def active(self) -> bool:
@@ -115,6 +125,7 @@ class LiveCoach(QObject):
         self.tips_shown = 0
         self._started_at = time.monotonic()
         self._timer.start(s.live.interval_s * 1000)
+        self._watch.start()
         self.state_changed.emit(True)
         return True
 
@@ -129,6 +140,7 @@ class LiveCoach(QObject):
 
     def _cleanup(self) -> None:
         self._timer.stop()
+        self._watch.stop()
         if self.capture is not None:
             self.capture.stop()
         self.capture = None
@@ -147,11 +159,15 @@ class LiveCoach(QObject):
         if not self.active or self.busy:
             return
         s = self._settings()
+        if not s.live.acknowledged:  # turned off in Settings meanwhile
+            self._fail("live.need_ack")
+            return
         self.capture.ensure_running()
         if usage_tracker.live_requests_today(self.db) >= s.live.max_tips_per_day:
             self._fail("live.err_daily_limit")
             return
-        paths = self.capture.latest(s.live.frames)
+        fresh_after = time.time() - (s.live.frames * FRAME_EVERY_S + 8)
+        paths = [p for p in self.capture.latest(s.live.frames) if _mtime(p) >= fresh_after]  # never old screens
         self.capture.prune(keep=s.live.frames + 2)
         if len(paths) < 2:
             return  # not enough fresh screenshots yet

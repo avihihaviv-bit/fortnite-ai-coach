@@ -9,7 +9,7 @@ from fortnite_coach.i18n.translator import get_translator, tr
 from fortnite_coach.ui.pages.base import BasePage
 from fortnite_coach.ui.widgets.card import Card
 
-SECTIONS = ("flow", "before", "after", "report", "levels", "faq")
+SECTIONS = ("flow", "before", "after", "report", "search", "live", "clips", "levels", "faq")
 
 
 class HelpPage(BasePage):
@@ -33,13 +33,15 @@ class HelpPage(BasePage):
     def retranslate(self) -> None:
         super().retranslate()
         hk = ("Ctrl+Shift+F9", "Ctrl+Shift+F10")
+        live_hk = "Ctrl+Shift+F11"
         if self.ctx is not None:
             r = self.ctx.settings().recording
             hk = (r.hotkey_start, r.hotkey_stop)
+            live_hk = self.ctx.settings().live.hotkey
         rtl = get_translator().is_rtl
         for card, body, key in self.cards:
             card.set_title(tr(f"help.{key}.title"))
-            html = tr(f"help.{key}.body", start=hk[0], stop=hk[1])
+            html = tr(f"help.{key}.body", start=hk[0], stop=hk[1], live=live_hk)
             # one paragraph per line with an explicit base direction, so a line that starts with a
             # Latin word (XP, Gemini) is still laid out right-to-left in Hebrew
             d, a = ("rtl", "right") if rtl else ("ltr", "left")

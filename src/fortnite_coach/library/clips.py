@@ -55,17 +55,19 @@ def detected_folders(home: Path | None = None) -> list[tuple[str, Path]]:
     return out
 
 
-def scan(folders: list[Path], limit: int = MAX_FILES) -> list[Clip]:
-    """Newest first. Skips our own cache/proxy files and folders we cannot read."""
+def scan(folders: list[Path], limit: int = MAX_FILES, shallow: set[str] | None = None) -> list[Clip]:
+    """Newest first. Folders in `shallow` are read without subfolders (e.g. the whole Videos folder)."""
     found: dict[str, Clip] = {}
+    shallow = {str(Path(p)).lower() for p in (shallow or set())}
     for root in folders:
         root = Path(root)
         if not root.is_dir():
             continue
         base_depth = len(root.parts)
+        max_depth = 0 if str(root).lower() in shallow else MAX_DEPTH
         for dirpath, dirnames, filenames in os.walk(root, onerror=lambda _e: None):
             depth = len(Path(dirpath).parts) - base_depth
-            dirnames[:] = [d for d in dirnames if not d.startswith(".") and depth < MAX_DEPTH]
+            dirnames[:] = [d for d in dirnames if not d.startswith(".") and depth < max_depth]
             for fn in filenames:
                 p = Path(dirpath) / fn
                 if p.suffix.lower() not in VIDEO_EXTS:

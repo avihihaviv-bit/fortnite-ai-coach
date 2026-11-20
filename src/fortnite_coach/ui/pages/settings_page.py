@@ -385,6 +385,12 @@ class SettingsPage(BasePage):
         try:
             if parse_hotkey(start) == parse_hotkey(stop):
                 raise HotkeyError("same")
+            try:
+                live = parse_hotkey(settings.live.hotkey)
+            except HotkeyError:
+                live = None
+            if live in (parse_hotkey(start), parse_hotkey(stop)):
+                raise HotkeyError("same as live")
         except HotkeyError:
             self._rec_msg = ("rec.err_hotkey", {})
             self._render_recording()

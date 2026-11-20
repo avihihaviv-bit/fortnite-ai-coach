@@ -36,7 +36,8 @@ def save_report(db: Database, session_id: int, *, model: str, prompt_version: st
         rep.mistakes = [Mistake(skill=m.skill, code=m.code, severity=m.severity, timestamp_s=m.start_s,
                                 timestamp_end_s=m.end_s, what_happened=m.what_happened, better_option=m.better_option,
                                 why=m.why, how_to_practice=m.how_to_practice, evidence=m.evidence,
-                                confidence=m.confidence) for m in agg.mistakes]
+                                confidence=m.confidence, search_query=m.search_query or "")
+                        for m in agg.mistakes]
         s.add(rep)
         s.flush()
         if award_xp:
@@ -168,6 +169,51 @@ class RepeatedMistake:
     skill: str
     sessions: int
     total: int
+
+
+@dataclass
+class Struggle:
+    code: str
+    skill: str
+    sessions: int        # analyzed sessions where it was seen
+    total: int           # times seen
+    query: str           # newest AI search phrase for it ("" -> curated phrase is used)
+    example: str         # newest "what happened" text (the player's own moment)
+    severity: str
+
+
+_SEV = {"high": 3, "medium": 2, "low": 1}
+
+
+def struggles(db: Database, limit: int = 5) -> list[Struggle]:
+    """What the player struggles with most: repeated first, then severity, then recency. Evidence-based only."""
+    with db.session() as s:
+        rows = s.execute(select(Mistake.code, Mistake.skill, Mistake.report_id, Mistake.severity, Mistake.search_query,
+                                Mistake.what_happened).order_by(Mistake.id.asc())).all()
+    groups: dict[str, dict] = {}
+    for code, skill, rid, sev, q, what in rows:
+        key = code if code != "OTHER" else f"OTHER:{(q or what)[:40].lower()}"
+        g = groups.setdefault(key, {"code": code, "skill": skill, "reports": set(), "total": 0, "query": "",
+                                    "example": "", "sev": 0, "last": 0})
+        g["reports"].add(rid)
+        g["total"] += 1
+        g["sev"] = max(g["sev"], _SEV.get(sev, 2))
+        g["last"] = rid
+        if q:
+            g["query"] = q
+        g["example"] = what
+    ranked = sorted(groups.values(), key=lambda g: (-len(g["reports"]), -g["sev"], -g["total"], -g["last"]))
+    inv = {v: k for k, v in _SEV.items()}
+    return [Struggle(g["code"], g["skill"], len(g["reports"]), g["total"], g["query"], g["example"], inv[g["sev"]])
+            for g in ranked[:limit]]
+
+
+def latest_search_queries(db: Database) -> dict[str, str]:
+    """The newest AI search phrase per mistake code (what to search for that exact problem)."""
+    with db.session() as s:
+        rows = s.execute(select(Mistake.code, Mistake.search_query).where(Mistake.search_query != "")
+                         .order_by(Mistake.id.asc())).all()
+    return {c: q for c, q in rows}
 
 
 def repeated_mistakes(db: Database, min_sessions: int = 2) -> list[RepeatedMistake]:

@@ -80,8 +80,11 @@ class ExerciseCard(QFrame):
         lay.addWidget(why)
         from fortnite_coach.coaching.resources import links_html
 
+        from fortnite_coach.db.repositories import report_repo
+
         code = (ex.source_mistake_codes or [None])[0]
-        self.guides = QLabel(f"<b>{tr('learn.guides')}</b>  " + links_html(code, ex.skill, tr("learn.videos"), tr("learn.articles")))
+        ai_q = report_repo.latest_search_queries(page.ctx.db).get(code) if code else None
+        self.guides = QLabel(f"<b>{tr('learn.guides')}</b><br>" + links_html(code, ex.skill, tr("learn.search"), ai_q))
         self.guides.setOpenExternalLinks(True)
         self.guides.setWordWrap(True)
         lay.addWidget(self.guides)

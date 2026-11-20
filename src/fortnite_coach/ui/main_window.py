@@ -126,6 +126,9 @@ class MainWindow(QMainWindow):
         self.refresh_data()
         self.retranslate()
         self.navigate("dashboard")
+        if self.settings.hardware_checked and recording_source is None:
+            # A few short ffmpeg checks in the background, so the start hotkey works right away from the tray.
+            self.recording.detect()
 
     # ---- gemini / recording ------------------------------------------------
     def gemini_status(self) -> GeminiStatus:
@@ -314,7 +317,8 @@ class MainWindow(QMainWindow):
         from fortnite_coach.db.repositories import progress_repo
 
         self.pages["dashboard"].refresh(stats, lv, report_repo.list_reports(self.db, 5), repeated,
-                                        progress_repo.periods(self.db))
+                                        progress_repo.periods(self.db), report_repo.struggles(self.db),
+                                        report_repo.latest_search_queries(self.db))
         self.pages["profile"].refresh(stats, lv, repeated)
         for skill in SKILL_PAGES:
             self.pages[skill.value].refresh(stats, lv.skills.get(skill.value),

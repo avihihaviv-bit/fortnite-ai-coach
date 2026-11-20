@@ -161,9 +161,11 @@ class ClipsPage(BasePage):
         if self.scanning:
             return
         self.scanning = True
-        folders = [p for _, p in self.folders()]
+        pairs = self.folders()
+        folders = [p for _, p in pairs]
+        shallow = {str(p) for k, p in pairs if k == "clips.src_videos"}
         self._render_actions()
-        run_task(lambda: clip_lib.scan(folders), self._scanned, lambda _e: self._scanned([]))
+        run_task(lambda: clip_lib.scan(folders, shallow=shallow), self._scanned, lambda _e: self._scanned([]))
 
     def _scanned(self, clips) -> None:
         self.scanning = False

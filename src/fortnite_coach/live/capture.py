@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+import time
 from pathlib import Path
 
 from fortnite_coach.video.ffmpeg_tools import LOW_PRIORITY, NO_WINDOW
@@ -21,6 +22,8 @@ class FrameCapture:
         self.ffmpeg, self.folder, self.source, self.monitor_index = ffmpeg, folder, source, monitor_index
         self._proc: subprocess.Popen | None = None
         self.restarts = 0
+        self._fast_fails = 0
+        self._started = 0.0
 
     def command(self) -> list[str]:
         pattern = str(self.folder / "frame_%06d.jpg")
@@ -47,6 +50,7 @@ class FrameCapture:
         return self._proc is not None and self._proc.poll() is None
 
     def start(self) -> None:
+        self._started = time.monotonic()
         self.folder.mkdir(parents=True, exist_ok=True)
         self._proc = subprocess.Popen(self.command(), stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
                                       stderr=subprocess.DEVNULL, creationflags=NO_WINDOW | LOW_PRIORITY)
@@ -55,6 +59,10 @@ class FrameCapture:
         """Restart if Windows cut the capture off."""
         if self._proc is not None and self._proc.poll() is not None:
             self.restarts += 1
+            self._fast_fails = self._fast_fails + 1 if time.monotonic() - self._started < 10 else 0
+            if self.source == "ddagrab" and self._fast_fails >= 3:
+                self.source = "gdigrab"  # Desktop Duplication unavailable: use the slower GDI capture
+                self._fast_fails = 0
             self.start()
 
     def latest(self, n: int) -> list[Path]:

@@ -157,7 +157,7 @@ class HistoryPage(BasePage):
                 (tr("report.what"), m.what_happened), (tr("report.better"), m.better_option), (tr("report.why"), m.why),
                 (tr("report.drill"), m.how_to_practice), (tr("report.evidence"), m.evidence),
                 (tr("report.confidence"), conf),
-                (tr("learn.guides"), links_html(m.code, m.skill, tr("learn.videos"), tr("learn.articles"))),
+                (tr("learn.guides"), links_html(m.code, m.skill, tr("learn.search"), getattr(m, "search_query", ""))),
             ], badge=tr(f"severity.{m.severity}"))
             add(card)
             self._cards.append((card, m.timestamp_s or 0))

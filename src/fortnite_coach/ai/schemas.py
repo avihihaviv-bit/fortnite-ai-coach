@@ -21,6 +21,10 @@ class MistakeOut(BaseModel):
     how_to_practice: str = Field(description="A specific drill to fix it")
     evidence: str = Field(description="What is visible in the video that shows this")
     confidence: float = Field(description="0 to 1")
+    search_query: str = Field(default="", description=(
+        "English search phrase, 4-9 words, that this player should type on YouTube / TikTok / Google to find a "
+        "tutorial fixing exactly THIS situation (name the mechanic, the mode and the moment), e.g. "
+        "'fortnite how to protect while healing in box fights' or 'fortnite pre fire double edit tutorial'"))
 
 
 class GoodPlayOut(BaseModel):
