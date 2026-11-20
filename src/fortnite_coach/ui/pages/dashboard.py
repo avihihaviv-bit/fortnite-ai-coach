@@ -181,6 +181,11 @@ class DashboardPage(BasePage):
         prio = [f"<b>{i + 1}. {code_label(r.code, False)}</b> ({tr(f'skill.{r.skill}')}) · {tr('dash.seen_in', n=r.sessions)}"
                 f"<br>{links_html(r.code, r.skill, label, queries.get(r.code))}"
                 for i, r in enumerate(self.repeated[:3])]
+        if not prio and self.struggles:  # after the first analysis: the biggest problems seen so far
+            prio = [f"<b>{i + 1}. {code_label(g.code, False) if g.code != 'OTHER' else g.example[:60]}</b> "
+                    f"({tr(f'skill.{g.skill}')}) · {tr(f'severity.{g.severity}')}"
+                    f"<br>{links_html(g.code if g.code != 'OTHER' else None, g.skill, label, g.query)}"
+                    for i, g in enumerate(self.struggles[:3])]
         if not prio and st.weakest:
             prio = [f"<b>1. {tr(f'skill.{st.weakest}')}</b> · {tr('dash.lowest_score')}"
                     f"<br>{links_html(None, st.weakest, label)}"]

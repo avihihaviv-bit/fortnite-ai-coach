@@ -320,3 +320,35 @@ def test_videos_root_scanned_shallow(tmp_path):
     (deep / "movie.mp4").write_bytes(b"\0" * 60_000)
     found = clip_lib.scan([videos], shallow={str(videos)})
     assert [c.name for c in found] == ["top.mp4"]
+
+
+def test_live_skips_static_screens_and_avoids_repeats():
+    from fortnite_coach.live.coach import AVOID, looks_static
+
+    assert looks_static([b"x" * 50_000, b"y" * 50_010, b"z" * 50_005])   # menu / pause: nothing changed
+    assert not looks_static([b"x" * 50_000, b"y" * 58_000])              # gameplay: frames differ
+    assert "repeat" in AVOID["en"]
+
+
+def test_live_tip_falls_back_to_plain_settings():
+    from fortnite_coach.ai.gemini_service import GeminiService
+
+    client = FakeClient(responses=[FakeAPIError(400, "thinking_level is not supported TEST DATA"), "TEST DATA tip"])
+    svc = GeminiService(lambda: "k", "gemini-3-flash", client_factory=lambda k, t: client)
+    res = svc.live_tip([b"\xff\xd8jpg"], "sys", "prompt")
+    assert res.text == "TEST DATA tip" and svc._live_minimal
+    assert client.generate_calls[-1][2].thinking_config is None
+
+
+def test_live_warns_after_repeated_failures(win):
+    w, client, qtbot = win
+    connect(w, qtbot)
+    _enable_live(w)
+    client._responses = [FakeAPIError(503, "UNAVAILABLE TEST DATA")] * 3
+    assert w.live.start()
+    seen = []
+    w.live.warning.connect(seen.append)
+    for _ in range(3):
+        w.live._failed(FakeAPIError(503, "UNAVAILABLE TEST DATA"), "m")
+    assert seen == ["gemini.err_server"] and w.live.active
+    assert "not answering" in w.overlay.text

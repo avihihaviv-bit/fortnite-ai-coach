@@ -159,7 +159,9 @@ class ClipsPage(BasePage):
 
     def rescan(self) -> None:
         if self.scanning:
+            self._rescan_again = True  # folders changed during a scan: scan once more when it ends
             return
+        self._rescan_again = False
         self.scanning = True
         pairs = self.folders()
         folders = [p for _, p in pairs]
@@ -169,6 +171,8 @@ class ClipsPage(BasePage):
 
     def _scanned(self, clips) -> None:
         self.scanning = False
+        if getattr(self, "_rescan_again", False):
+            self.rescan()
         self.clips = clips
         analyzed = self._analyzed_paths()
         self.clip_list.blockSignals(True)

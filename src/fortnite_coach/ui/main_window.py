@@ -48,6 +48,7 @@ class MainWindow(QMainWindow):
         self.live.tip.connect(self._show_tip)
         self.live.tip.connect(lambda _t: self._on_session_changed())
         self.live.stopped_with_error.connect(self._on_live_error)
+        self.live.warning.connect(lambda key: self._show_tip(tr("live.warning_fails", reason=tr(key))))
         self.live.state_changed.connect(lambda _a: self._on_session_changed())
         self.ctx = AppContext(
             db=db, paths=paths, settings=lambda: self.settings, save_settings=self._save_settings,

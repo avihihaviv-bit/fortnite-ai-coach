@@ -613,5 +613,6 @@
   "help.live.title": "Live Coach (experimental)",
   "help.live.body": "• Turn it on once: Settings → Live Coach → read the limits → tick the box → Save. Use <b>Preview the overlay</b> to see where tips appear.<br>• On the Record card choose <b>Live Coach only</b> or <b>Record video + Live Coach</b>, then Start (or the start hotkey). On/off at any time: <b>{live}</b>.<br>• Practice only (Creative, Box Fights, Zone Wars). Not in Ranked or tournaments.<br>• Tips arrive ~5–20 s after the moment and each tip is one free-tier request. Needs Windowed Fullscreen to show over the game.",
   "help.clips.title": "Clip library (Medal and others)",
-  "help.clips.body": "• Clip library finds Medal, NVIDIA, Xbox Game Bar and this app's folders automatically. Add any other folder with <b>Add folder…</b>.<br>• Double-click a clip to open it, or tick up to 10 and click <b>Analyze selected</b>: the app shows the total requests first, then analyzes them one after another.<br>• Medal folder: Medal → Settings → Recording → Clip folder."
+  "help.clips.body": "• Clip library finds Medal, NVIDIA, Xbox Game Bar and this app's folders automatically. Add any other folder with <b>Add folder…</b>.<br>• Double-click a clip to open it, or tick up to 10 and click <b>Analyze selected</b>: the app shows the total requests first, then analyzes them one after another.<br>• Medal folder: Medal → Settings → Recording → Clip folder.",
+  "live.warning_fails": "Live Coach: Gemini is not answering ({reason}). Still trying…"
 }

@@ -176,9 +176,12 @@ class GeminiService:
         parts.append(types.Part(text=prompt))
         contents = [types.Content(role="user", parts=parts)]
 
-        def call():
+        if getattr(self, "_live_minimal", False):
+            cfg = dict(system_instruction=system_instruction, max_output_tokens=1024, temperature=0.3)
+
+        def call(c):
             resp = self.client.models.generate_content(model=self.model, contents=contents,
-                                                       config=types.GenerateContentConfig(**cfg))
+                                                       config=types.GenerateContentConfig(**c))
             usage = getattr(resp, "usage_metadata", None)
             return GenerateResult(getattr(resp, "text", None) or "", getattr(usage, "prompt_token_count", None),
                                   getattr(usage, "candidates_token_count", None))
@@ -186,7 +189,15 @@ class GeminiService:
         # one quick attempt; the next tip comes soon anyway
         saved, self.max_retries = self.max_retries, 0
         try:
-            return self._with_retries(call)
+            try:
+                return self._with_retries(lambda: call(cfg))
+            except GeminiError as e:
+                if e.i18n_key != "gemini.err_bad_request" or getattr(self, "_live_minimal", False):
+                    raise
+                # the model rejected an optional setting (thinking / media resolution): use plain settings from now on
+                self._live_minimal = True
+                return self._with_retries(lambda: call(dict(system_instruction=system_instruction,
+                                                             max_output_tokens=1024, temperature=0.3)))
         finally:
             self.max_retries = saved
 

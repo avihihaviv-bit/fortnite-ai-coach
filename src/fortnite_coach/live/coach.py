@@ -41,6 +41,8 @@ SYSTEM = {
            "צפייה, אפליקציה אחרת) או שאין משהו מועיל, ענה בדיוק NONE. לעולם אל תנחש מה שלא רואים."),
 }
 PROMPT = {"en": "Screenshots above. One tip, or NONE.", "he": "הצילומים למעלה. טיפ אחד, או NONE."}
+AVOID = {"en": "Do not repeat these recent tips (say something new, or NONE):",
+         "he": "אל תחזור על הטיפים האחרונים האלה (תן משהו חדש, או NONE):"}
 
 
 def clean_tip(text: str) -> str | None:
@@ -58,8 +60,18 @@ def _mtime(p: Path) -> float:
         return 0.0
 
 
+def looks_static(frames: list[bytes]) -> bool:
+    """Same-size JPEGs = the screen did not change (menu, pause, AFK): no request needed."""
+    sizes = [len(f) for f in frames]
+    return len(sizes) >= 2 and max(sizes) - min(sizes) <= max(1, max(sizes) // 200)
+
+
+WARN_AFTER_FAILS = 3
+
+
 class LiveCoach(QObject):
     tip = Signal(str)
+    warning = Signal(str)             # i18n key: still running, but Gemini keeps failing
     state_changed = Signal(bool)
     stopped_with_error = Signal(str)  # i18n key
 
@@ -75,6 +87,9 @@ class LiveCoach(QObject):
         self.capture: FrameCapture | None = None
         self.busy = False
         self.tips_shown = 0
+        self.skipped_static = 0
+        self.recent_tips: list[str] = []
+        self._fails = 0
         self.last_error: str | None = None
         self._service = None
         self._started_at = 0.0
@@ -123,6 +138,9 @@ class LiveCoach(QObject):
             return False
         self.last_error = None
         self.tips_shown = 0
+        self.skipped_static = 0
+        self.recent_tips = []
+        self._fails = 0
         self._started_at = time.monotonic()
         self._timer.start(s.live.interval_s * 1000)
         self._watch.start()
@@ -175,19 +193,27 @@ class LiveCoach(QObject):
             frames = [p.read_bytes() for p in paths]
         except OSError:
             return
+        if looks_static(frames):
+            self.skipped_static += 1  # saves a request: nothing on screen changed
+            return
         lang = s.language.value if s.language.value in SYSTEM else "en"
+        prompt = PROMPT[lang]
+        if self.recent_tips:
+            prompt += "\n" + AVOID[lang] + " " + " | ".join(self.recent_tips)
         service, model = self._service, s.gemini.model
         self.busy = True
-        run_task(lambda: service.live_tip(frames, SYSTEM[lang], PROMPT[lang]),
+        run_task(lambda: service.live_tip(frames, SYSTEM[lang], prompt),
                  lambda res: self._done(res, model), lambda err: self._failed(err, model))
 
     def _done(self, res, model: str) -> None:
         self.busy = False
         usage_tracker.record(self.db, model=model, kind="live", success=True, prompt_tokens=res.prompt_tokens,
                              output_tokens=res.output_tokens)
+        self._fails = 0
         text = clean_tip(res.text)
         if text and self.active:
             self.tips_shown += 1
+            self.recent_tips = [*self.recent_tips, text][-3:]
             self.tip.emit(text)
 
     def _failed(self, err: Exception, model: str) -> None:
@@ -197,8 +223,11 @@ class LiveCoach(QObject):
         log.warning("Live tip failed: %s", key)
         if key in FATAL_KEYS:
             self._fail(key)
-        else:
-            self.last_error = key  # transient (busy, timeout): the next interval tries again
+            return
+        self._fails += 1
+        if self._fails == WARN_AFTER_FAILS and self.active:
+            self.warning.emit(key)  # tell the player once; it keeps trying
+        self.last_error = key  # transient (busy, timeout): the next interval tries again
 
 
 __all__ = ["LiveCoach", "clean_tip", "FRAME_EVERY_S"]
