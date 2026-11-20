@@ -9,12 +9,12 @@ from fortnite_coach.core.skills import Skill
 
 # What a strong coach pays most attention to in each mode (season-independent).
 MODE_HINTS = {
-    GameMode.CREATIVE_FREE_BUILD: "Free build practice: judge mechanics only (building sequences, 90s, edits, "
-                                  "consistency). There is no opponent, so do not judge fights or game sense.",
-    GameMode.REALISTIC_1V1: "Realistic 1v1: protection before shooting, piece control, retakes, edit timing, "
+    GameMode.CREATIVE_FREE_BUILD: "Free build practice: judge mechanics only (building sequences, cranking 90s, edits, build-edit "
+                                  "combos, waterfalls, piece swaps, consistency). There is no opponent, so do not judge fights or game sense.",
+    GameMode.REALISTIC_1V1: "Realistic 1v1: protection before shooting, piece control, retakes, edit timing, pre-firing, weapon swaps, "
                             "and when to reset or disengage.",
     GameMode.BOX_FIGHTS: "Box fights: piece control (take and lock walls, cones, floors), phasing, trapping, "
-                         "edit-and-shoot timing, right-hand peeks and resets.",
+                         "edit-and-shoot timing, pre-firing edits, shotgun-to-SMG swaps, right-hand peeks and resets.",
     GameMode.ZONE_WARS: "Zone wars: early rotations, storm decisions, positioning vs. other players, third parties, "
                         "and fights while moving.",
     GameMode.RANKED: "Ranked: fight selection, third-party awareness, rotations, resource management, endgame layers.",

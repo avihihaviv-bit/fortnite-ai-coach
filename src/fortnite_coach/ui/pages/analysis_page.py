@@ -75,11 +75,19 @@ class AnalysisPage(BasePage):
         self.rec_card = Card()
         self.rec_status = StatusPill()
         self.rec_time = QLabel(objectName="StatValue")
+        mode_row = QHBoxLayout()
+        self.start_mode_label = QLabel()
+        self.start_mode = QComboBox()
+        for m in ("record", "record_live", "live"):
+            self.start_mode.addItem("", m)
+        self.start_mode.currentIndexChanged.connect(self._mode_changed)
+        mode_row.addWidget(self.start_mode_label)
+        mode_row.addWidget(self.start_mode, 1)
         rec_btns = QHBoxLayout()
         self.rec_start = QPushButton(objectName="PrimaryButton")
         self.rec_stop = QPushButton(objectName="DangerButton")
         self.rec_start.clicked.connect(self._start_recording)
-        self.rec_stop.clicked.connect(ctx.recording.stop)
+        self.rec_stop.clicked.connect(self._stop_session)
         self.rec_load = QPushButton()
         self.rec_load.clicked.connect(self.load_last_recording)
         rec_btns.addWidget(self.rec_start)
@@ -90,6 +98,7 @@ class AnalysisPage(BasePage):
         self.rec_info.setWordWrap(True)
         for w in (self.rec_status, self.rec_time):
             self.rec_card.body.addWidget(w)
+        self.rec_card.body.addLayout(mode_row)
         self.rec_card.body.addLayout(rec_btns)
         self.rec_card.body.addWidget(self.rec_info)
         top.addWidget(self.rec_card, 1)
@@ -248,9 +257,37 @@ class AnalysisPage(BasePage):
             rc.detect()
             self._render_recording()
 
+    def _mode_changed(self) -> None:
+        mode = self.start_mode.currentData()
+        s = self.ctx.settings()
+        if mode and s.recording.start_mode != mode:
+            rec = s.recording.model_copy()
+            rec.start_mode = mode
+            s.recording = rec
+            self.ctx.save_settings(s)
+            win = self.window()
+            for key in ("gameplay", "training_sessions"):  # keep both pages in sync
+                page = getattr(win, "pages", {}).get(key)
+                if page is not None and page is not self:
+                    page._render_recording()
+        self._render_recording()
+
+    def _live_active(self) -> bool:
+        return bool(self.ctx.live is not None and self.ctx.live.active)
+
     def _start_recording(self) -> None:
         self._rec_error = None
-        self.ctx.recording.start()
+        if self.ctx.live is None:
+            self.ctx.recording.start()
+        else:
+            self.ctx.start_session()
+        self._render_recording()
+
+    def _stop_session(self) -> None:
+        if self.ctx.live is None:
+            self.ctx.recording.stop()
+        else:
+            self.ctx.stop_session()
         self._render_recording()
 
     def _on_recording_finished(self, parts) -> None:
@@ -290,18 +327,36 @@ class AnalysisPage(BasePage):
 
     def _render_recording(self) -> None:
         rc = self.ctx.recording
-        rec = self.ctx.settings().recording
+        settings = self.ctx.settings()
+        rec = settings.recording
+        live = self.ctx.live
+        live_on = self._live_active()
+        mode = rec.start_mode
         self.rec_card.set_title(tr("rec.title"), tr("rec.subtitle"))
+        self.start_mode_label.setText(tr("rec.mode"))
+        self.start_mode.blockSignals(True)
+        for i, m in enumerate(("record", "record_live", "live")):
+            self.start_mode.setItemText(i, tr(f"rec.mode_{m}"))
+        self.start_mode.setCurrentIndex(max(0, self.start_mode.findData(mode)))
+        self.start_mode.blockSignals(False)
+        active = rc.is_recording or live_on
+        self.start_mode.setEnabled(not active)
         if rc.is_recording:
-            self.rec_status.set_state("error", tr("rec.recording"))
+            self.rec_status.set_state("error", tr("rec.recording") + ("  ·  " + tr("live.on") if live_on else ""))
             self.rec_time.setText(fmt_duration(rc.recorder.elapsed_s))
+        elif live_on:
+            self.rec_status.set_state("ok", tr("live.on"))
+            self.rec_time.setText(tr("live.tips_count", n=live.tips_shown))
         else:
             self.rec_status.set_state("off", tr("rec.idle"))
             self.rec_time.setText("00:00")
-        self.rec_start.setText(tr("rec.start"))
+        self.rec_start.setText(tr(f"rec.start_{mode}"))
         self.rec_stop.setText(tr("rec.stop"))
-        self.rec_start.setEnabled(not rc.is_recording and rc.caps is not None and rc.caps.can_record)
-        self.rec_stop.setEnabled(rc.is_recording)
+        needs_rec = mode in ("record", "record_live")
+        can_rec = rc.caps is not None and rc.caps.can_record
+        live_reason = live.block_reason() if (live is not None and mode != "record") else None
+        self.rec_start.setEnabled(not active and (can_rec or not needs_rec) and live_reason is None)
+        self.rec_stop.setEnabled(active)
         self.rec_load.setText(tr("rec.load_last"))
         self.rec_load.setVisible(bool(self._last_recording) and not rc.is_recording)
         lines: list[str] = []
@@ -326,8 +381,17 @@ class AnalysisPage(BasePage):
                 lines.append(tr("rec.hw_note") if hw else tr("rec.cpu_warning"))
                 if not rec.audio_device:
                     lines.append(tr("rec.video_only"))
+        if live is not None and mode != "record":
+            if live_reason:
+                lines.insert(0, "⚠  " + tr(live_reason))
+            else:
+                lines.append(tr("live.info", interval=settings.live.interval_s))
+            if live.last_error and not live_on:
+                lines.insert(0, "⚠  " + tr("live.stopped", reason=tr(live.last_error)))
         if hotkeys_supported() and rec.hotkeys_enabled:
             lines.append(tr("rec.hotkeys", start=rec.hotkey_start, stop=rec.hotkey_stop))
+            if live is not None:
+                lines.append(tr("live.hotkey_line", key=settings.live.hotkey))
             if rc.hotkey_errors:
                 lines.append("⚠  " + tr("rec.hotkey_taken", keys=", ".join(rc.hotkey_errors)))
         elif not hotkeys_supported():
@@ -455,9 +519,10 @@ class AnalysisPage(BasePage):
         self.job_error = None
         self.job_detail = ""
         if process_guard.is_fortnite_running():  # one check, on click only
-            self.job_error = "analysis.fortnite_running"
-            self.refresh_status()
-            return
+            # Not blocked: the player decides. The video preparation runs at low priority and the rest is
+            # network time, but it still uses some CPU while the game runs.
+            if not self.confirm(tr("analysis.fortnite_running_title"), tr("analysis.fortnite_running_confirm")):
+                return
         settings = self.ctx.settings()
         m = self.current.meta
         req = pipeline.AnalysisRequest(

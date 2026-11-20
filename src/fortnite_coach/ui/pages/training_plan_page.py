@@ -78,6 +78,13 @@ class ExerciseCard(QFrame):
         why = QLabel(reason_text(ex.reason), objectName="ReasonBox")
         why.setWordWrap(True)
         lay.addWidget(why)
+        from fortnite_coach.coaching.resources import links_html
+
+        code = (ex.source_mistake_codes or [None])[0]
+        self.guides = QLabel(f"<b>{tr('learn.guides')}</b>  " + links_html(code, ex.skill, tr("learn.videos"), tr("learn.articles")))
+        self.guides.setOpenExternalLinks(True)
+        self.guides.setWordWrap(True)
+        lay.addWidget(self.guides)
 
         done_row = QHBoxLayout()
         self.minutes = QSpinBox()

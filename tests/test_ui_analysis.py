@@ -99,16 +99,21 @@ def test_declining_confirmation_sends_nothing(setup, sample_video, monkeypatch):
     assert page.job is None and client.uploads == 0 and not client.generate_calls
 
 
-def test_fortnite_running_blocks_analysis(setup, sample_video, monkeypatch):
+def test_fortnite_running_asks_instead_of_blocking(setup, sample_video, monkeypatch):
     w, client, qtbot = setup
     connect(w, qtbot)
     page = load(w, qtbot, sample_video)
     from fortnite_coach.recording import process_guard
 
     monkeypatch.setattr(process_guard, "is_fortnite_running", lambda: True)
-    monkeypatch.setattr(page, "confirm", lambda *a: pytest.fail("must not ask"))
+    asked = []
+    monkeypatch.setattr(page, "confirm", lambda title, text: asked.append(title) or False)
     page.analyze_btn.click()
-    assert "Fortnite is running" in page.analyze_reason.text() and client.uploads == 0
+    assert asked == ["Fortnite is running"] and page.job is None and client.uploads == 0  # declined: nothing sent
+    monkeypatch.setattr(page, "confirm", lambda *a: True)
+    page.analyze_btn.click()
+    qtbot.waitUntil(lambda: page.job is not None and not page.job.running, timeout=30000)
+    assert w.current_key == "history"  # accepted: analysis ran while the game was open
 
 
 def test_without_key_analyze_stays_disabled(setup, sample_video):
@@ -188,7 +193,7 @@ def test_settings_usage_knowledge_about_cards(setup, monkeypatch):
     connect(w, qtbot)
     assert sp.knowledge_card.update_btn.isEnabled()
     assert "Today: 0 of" in sp.usage_card.limit_label.text()
-    assert "Live Coach" in sp.about_card.privacy.text() and "not available" in sp.about_card.privacy.text()
+    assert "Live Coach" in sp.about_card.privacy.text() and "experimental" in sp.about_card.privacy.text()
     sp.about_card.selftest_btn.click()
     qtbot.waitUntil(lambda: not sp.about_card.running, timeout=30000)
     assert "Everything required works" in sp.about_card.result.text()

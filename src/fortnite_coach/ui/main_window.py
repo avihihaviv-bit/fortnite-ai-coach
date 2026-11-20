@@ -16,6 +16,7 @@ from fortnite_coach.i18n.translator import get_translator, tr
 from fortnite_coach.ui.context import AppContext
 from fortnite_coach.ui.pages.analysis_page import AnalysisPage
 from fortnite_coach.ui.pages.base import BasePage
+from fortnite_coach.ui.pages.clips_page import ClipsPage
 from fortnite_coach.ui.pages.dashboard import DashboardPage
 from fortnite_coach.ui.pages.profile_page import ProfilePage
 from fortnite_coach.ui.pages.settings_page import SettingsPage
@@ -30,6 +31,9 @@ from fortnite_coach.ui.sidebar import NAV_KEYS, Sidebar
 class MainWindow(QMainWindow):
     def __init__(self, db: Database, paths: AppPaths, *, key_store: KeyStore | None = None,
                  recording_source: str | None = None, client_factory=None) -> None:
+        from fortnite_coach.live.coach import LiveCoach
+        from fortnite_coach.ui.overlay import TipOverlay
+
         super().__init__()
         self.db = db
         self.paths = paths
@@ -37,10 +41,20 @@ class MainWindow(QMainWindow):
         self.key_store = key_store or KeyStore()
         self.recording = RecordingController(paths.logs_dir, lambda: self.settings, source_override=recording_source)
         self.client_factory = client_factory
+        self.live = LiveCoach(lambda: self.settings, self.make_gemini_service, db,
+                              gemini_ready=lambda: self.gemini_status() is GeminiStatus.CONNECTED,
+                              source_override=recording_source)
+        self.overlay = TipOverlay()
+        self.live.tip.connect(self._show_tip)
+        self.live.tip.connect(lambda _t: self._on_session_changed())
+        self.live.stopped_with_error.connect(self._on_live_error)
+        self.live.state_changed.connect(lambda _a: self._on_session_changed())
         self.ctx = AppContext(
             db=db, paths=paths, settings=lambda: self.settings, save_settings=self._save_settings,
             recording=self.recording, key_store=self.key_store, gemini_status=self.gemini_status,
             gemini_service=self.make_gemini_service, open_report=self.open_report, data_changed=self.refresh_data,
+            live=self.live, start_session=self.start_session, stop_session=self.stop_session,
+            preview_tip=self._show_tip,
         )
         self.hotkeys = HotkeyManager(QApplication.instance(), lambda: int(self.winId()))
         self.hotkey_errors: list[str] = []
@@ -63,6 +77,7 @@ class MainWindow(QMainWindow):
             "profile": ProfilePage(),
             "gameplay": AnalysisPage(self.ctx, training=False),
             "training_sessions": AnalysisPage(self.ctx, training=True),
+            "clips": ClipsPage(self.ctx, self.open_clip),
             **{s.value: SkillPage(s) for s in SKILL_PAGES},
             "training_plan": TrainingPlanPage(self.ctx),
             "progress": ProgressPage(self.ctx),
@@ -91,12 +106,13 @@ class MainWindow(QMainWindow):
         for key in ("gameplay", "training_sessions"):
             self.pages[key].video_imported.connect(self.refresh_data)
         self.recording.capabilities_ready.connect(self._on_capabilities)
-        self.recording.state_changed.connect(lambda _s: self._render_recording_indicator())
+        self.recording.state_changed.connect(lambda _s: self._on_session_changed())
         self.recording.tick.connect(lambda _t: self._render_recording_indicator())
         self.register_hotkeys()
         from fortnite_coach.ui.tray import TrayController
 
-        self.tray = TrayController(self.recording, self)
+        self.tray = TrayController(self.recording, self, live=self.live, start=self.start_session,
+                                   stop=self.stop_session)
         self.tray.open_requested.connect(self.bring_to_front)
         self.tray.quit_requested.connect(self.quit_app)
         self._quitting = False
@@ -187,13 +203,51 @@ class MainWindow(QMainWindow):
         rec = self.settings.recording
         if not rec.hotkeys_enabled:
             return
-        for combo, action in ((rec.hotkey_start, self.recording.start), (rec.hotkey_stop, self.recording.stop)):
+        for combo, action in ((rec.hotkey_start, self.start_session), (rec.hotkey_stop, self.stop_session),
+                              (self.settings.live.hotkey, self.live.toggle)):
             try:
                 if not self.hotkeys.register(combo, action):
                     self.hotkey_errors.append(combo)
             except HotkeyError:
                 self.hotkey_errors.append(combo)
         self.recording.hotkey_errors = list(self.hotkey_errors)
+
+    # ---- sessions: record / record + live / live only ------------------------
+    def session_active(self) -> bool:
+        return self.recording.is_recording or self.live.active
+
+    def start_session(self) -> None:
+        """Start what the player chose on the record card (button, hotkey or tray)."""
+        mode = self.settings.recording.start_mode
+        if mode in ("record", "record_live"):
+            self.recording.start()
+        if mode in ("live", "record_live"):
+            self.live.start()
+
+    def stop_session(self) -> None:
+        if self.live.active:
+            self.live.stop()
+        if self.recording.is_recording:
+            self.recording.stop()
+
+    def open_clip(self, path: str) -> None:
+        self.pages["gameplay"].load_path(path)
+        self.navigate("gameplay")
+
+    def _show_tip(self, text: str) -> None:
+        self.overlay.monitor_index = self.settings.recording.monitor_index
+        self.overlay.show_tip(text, self.settings.live.show_seconds)
+
+    def _on_live_error(self, key: str) -> None:
+        msg = tr("live.stopped", reason=tr(key))
+        self._show_tip(msg)  # visible in-game, top-left
+        self.tray.notify(msg)
+        self._on_session_changed()
+
+    def _on_session_changed(self) -> None:
+        self._render_recording_indicator()
+        for key in ("gameplay", "training_sessions"):
+            self.pages[key]._render_recording()
 
     def _on_capabilities(self, caps) -> None:
         if caps is not None and not self.settings.hardware_checked:
@@ -203,9 +257,11 @@ class MainWindow(QMainWindow):
 
     def _render_recording_indicator(self) -> None:
         rec = self.recording
-        self.sidebar.set_recording(rec.is_recording, rec.recorder.elapsed_s)
+        live = self.live.active
+        self.sidebar.set_recording(rec.is_recording, rec.recorder.elapsed_s, live)
         title = tr("app.title")
-        self.setWindowTitle(f"● REC  {title}" if rec.is_recording else title)
+        prefix = ("● REC  " if rec.is_recording else "") + ("◆ LIVE  " if live else "")
+        self.setWindowTitle(prefix + title)
 
     def bring_to_front(self) -> None:
         """Called when the user launches the app a second time."""
@@ -237,6 +293,8 @@ class MainWindow(QMainWindow):
                 self.tray.told_about_tray = True
                 self.tray.notify(tr("tray.still_running"))
             return
+        self.live.stop()
+        self.overlay.hide()
         if self.recording.is_recording:
             self.recording.stop()  # finalize the file instead of leaving ffmpeg orphaned
         self.hotkeys.unregister_all()

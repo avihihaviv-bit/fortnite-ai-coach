@@ -10,6 +10,7 @@ from PySide6.QtWidgets import QGridLayout, QHBoxLayout, QLabel, QListWidget, QLi
 
 from fortnite_coach.coaching import taxonomy
 from fortnite_coach.coaching.prompt_builder import fmt_ts
+from fortnite_coach.coaching.resources import links_html
 from fortnite_coach.db.repositories import report_repo, session_repo
 from fortnite_coach.i18n.translator import get_translator, tr
 from fortnite_coach.ui.context import AppContext
@@ -156,6 +157,7 @@ class HistoryPage(BasePage):
                 (tr("report.what"), m.what_happened), (tr("report.better"), m.better_option), (tr("report.why"), m.why),
                 (tr("report.drill"), m.how_to_practice), (tr("report.evidence"), m.evidence),
                 (tr("report.confidence"), conf),
+                (tr("learn.guides"), links_html(m.code, m.skill, tr("learn.videos"), tr("learn.articles"))),
             ], badge=tr(f"severity.{m.severity}"))
             add(card)
             self._cards.append((card, m.timestamp_s or 0))

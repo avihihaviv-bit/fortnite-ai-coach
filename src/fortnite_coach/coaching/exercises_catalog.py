@@ -195,6 +195,44 @@ CATALOG: tuple[ExerciseTemplate, ...] = (
         T("Smaller targets or more distance.", "מטרות קטנות יותר או מרחק גדול יותר."),
         T("Aim trainer map", "מפת אימון כיוון"),
         ("AIM_EARLY_SHOT", "AIM_MISSED_OPEN_SHOT", "AIM_WRONG_WEAPON_RANGE")),
+    # ---------------- mechanics ----------------
+    ExerciseTemplate(
+        "mech_pre_fire", "mechanics", Skill.MECHANICS, "medium", 10,
+        T("Pre-fire the opening", "פרי-פייר לפתח"),
+        T("Your shot is already on the way when the opening appears.", "הירייה שלך כבר בדרך כשהפתח מופיע."),
+        T("In an edit course or 1v1 map with a friend: aim at where the opponent/window will be, start the edit and click "
+          "the shot at the same moment the edit confirms. Then practice shooting around corners the opponent must cross.",
+          "במסלול עריכות או מפת 1 על 1 עם חבר: כוון למקום שבו יהיה היריב/החלון, התחל את העריכה ולחץ ירייה באותו רגע "
+          "שהעריכה מאושרת. אחר כך תרגל ירי לפינות שהיריב חייב לעבור בהן."),
+        T("In 10 edit-peeks, the shot lands as the edit opens at least 7 times.", "ב-10 פיקים עם עריכה, הירייה נוחתת עם פתיחת העריכה לפחות 7 פעמים."),
+        T("Do it while moving, then with double edits.", "לעשות את זה בתנועה, ואז עם עריכות כפולות."),
+        T("Edit course or 1v1 map", "מסלול עריכות או מפת 1 על 1"),
+        ("MECH_NO_PRE_FIRE", "EDIT_WRONG_TIMING", "EDIT_CROSSHAIR_OFF")),
+    ExerciseTemplate(
+        "mech_swap_combo", "mechanics", Skill.MECHANICS, "medium", 8,
+        T("Shotgun → SMG swap combo", "קומבו החלפה שוטגאן ← SMG"),
+        T("Follow every shotgun hit with an instant swap and spray.", "להמשיך כל פגיעת שוטגאן בהחלפה מיידית וריסוס."),
+        T("Aim map with moving bots: shotgun shot, swap immediately (same key every time), track with SMG/AR. "
+          "Keep the swap key on a comfortable bind.",
+          "מפת כיוון עם בוטים בתנועה: ירייה בשוטגאן, החלפה מיד (אותו מקש כל פעם), מעקב עם SMG/AR. "
+          "שמור את מקש ההחלפה על כפתור נוח."),
+        T("20 combos in a row without a pause between the shotgun shot and the spray.", "20 קומבו ברצף בלי הפסקה בין ירייה בשוטגאן לריסוס."),
+        T("Add a protective wall between the two shots.", "להוסיף קיר הגנה בין שתי היריות."),
+        T("Aim trainer map with moving bots", "מפת אימון כיוון עם בוטים בתנועה"),
+        ("MECH_SLOW_SWAP", "FIGHT_NO_FOLLOW_UP", "MECH_MISSED_JUMP_SHOT")),
+    ExerciseTemplate(
+        "mech_build_edit_flow", "mechanics", Skill.MECHANICS, "hard", 12,
+        T("Build-edit flow: crank, waterfall, piece swap", "רצף בנייה-עריכה: קרנק, מפל, החלפת חלקים"),
+        T("Sequences that do not break under speed.", "רצפים שלא נשברים במהירות."),
+        T("Free build: 2 min cranking 90s up and a protected waterfall down; 2 min ramp rush with walls; "
+          "2 min wall-replace (break your own wall with a pickaxe and replace instantly); 2 min edit-place-shoot combos. Slow first, then speed up.",
+          "בנייה חופשית: 2 דק' קרנקינג 90s למעלה וירידת מפל מוגנת למטה; 2 דק' ראמפ ראש עם קירות; "
+          "2 דק' wall replace (שבור קיר שלך במכוש והחלף מיד); 2 דק' קומבו עריכה-בנייה-ירייה. קודם לאט, אחר כך מהר."),
+        T("Each part done without a broken sequence for a full minute.", "כל חלק בוצע בלי רצף שבור במשך דקה שלמה."),
+        T("Same routine against a friend who shoots at you.", "אותה שגרה מול חבר שיורה עליך."),
+        T("Free build island", "אי בנייה חופשית"),
+        ("MECH_BROKEN_SEQUENCE", "MECH_UNSAFE_WATERFALL", "MECH_RAMP_RUSH_NO_COVER", "MECH_SLOW_PIECE_SWAP",
+         "BUILD_SLOW_HEIGHT")),
     # ---------------- movement ----------------
     ExerciseTemplate(
         "move_strafe_peek", "mechanics", M, "medium", 8,

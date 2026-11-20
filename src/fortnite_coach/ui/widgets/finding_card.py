@@ -41,6 +41,7 @@ class FindingCard(QFrame):
             lbl = QLabel(f"<b>{label}</b>  {text}")
             lbl.setWordWrap(True)
             lbl.setTextFormat(Qt.TextFormat.RichText)
+            lbl.setOpenExternalLinks(True)
             body.addWidget(lbl)
         lay.addLayout(body, 1)
 

@@ -146,8 +146,10 @@ class SettingsPage(BasePage):
             self.quality_combo.addItem("", q)
         self.encoder_combo = QComboBox()
         self.audio_combo = QComboBox()
-        self.hk_start = QLineEdit()
-        self.hk_stop = QLineEdit()
+        from fortnite_coach.ui.widgets.hotkey_edit import HotkeyEdit
+
+        self.hk_start = HotkeyEdit()
+        self.hk_stop = HotkeyEdit()
         self.hk_enabled = QCheckBox()
         rform.addRow(self.rec_labels["folder"], folder_row)
         rform.addRow(self.rec_labels["resolution"], self.res_combo)
@@ -200,8 +202,11 @@ class SettingsPage(BasePage):
         self.delete_all_btn.clicked.connect(self._on_delete_all)
         self._counts = {"videos": 0, "sessions": 0, "reports": 0}
         self._data_dir = ""
-        from fortnite_coach.ui.pages.settings_cards import AboutCard, KnowledgeCard, UsageCard
+        from fortnite_coach.ui.pages.settings_cards import AboutCard, KnowledgeCard, LiveCard, UsageCard
 
+        self.live_card = LiveCard(ctx)
+        self.live_card.saved.connect(self.recording_settings_saved)
+        self.content.insertWidget(self.content.indexOf(self.data_card), self.live_card)
         self.usage_card = UsageCard(ctx)
         self.knowledge_card = KnowledgeCard(ctx)
         self.about_card = AboutCard(ctx)
@@ -211,7 +216,7 @@ class SettingsPage(BasePage):
         self.finish()
 
     def refresh_cards(self) -> None:
-        for c in (self.usage_card, self.knowledge_card, self.about_card):
+        for c in (self.live_card, self.usage_card, self.knowledge_card, self.about_card):
             c.render()
 
     # ================= Gemini key =================
@@ -493,6 +498,9 @@ class SettingsPage(BasePage):
         self.clear_cache_btn.setText(tr("settings.clear_cache"))
         self.delete_all_btn.setText(tr("settings.delete_all"))
         self.clear_cache_btn.setToolTip(tr("settings.clear_cache_tip"))
+        for hk in (self.hk_start, self.hk_stop):
+            hk.setPlaceholderText(tr("rec.hotkey_hint"))
+            hk.setToolTip(tr("rec.hotkey_hint"))
         self.delete_all_btn.setToolTip(tr("settings.delete_all_tip"))
         self._render_data()
         if hasattr(self, "about_card"):

@@ -54,9 +54,21 @@ class RecordingSettings(BaseModel):
     encoder: str = "auto"                  # auto or a detected encoder name
     audio_device: str | None = None        # DirectShow device name; None = video only
     monitor_index: int = Field(default=0, ge=0, le=8)
+    start_mode: str = Field(default="record", pattern="^(record|record_live|live)$")
     hotkey_start: str = "Ctrl+Shift+F9"
     hotkey_stop: str = "Ctrl+Shift+F10"
     hotkeys_enabled: bool = True
+
+
+class LiveSettings(BaseModel):
+    """Experimental Live Coach: short tips from a few screenshots, shown top-left. Off until the user enables it."""
+
+    acknowledged: bool = False             # user accepted: practice only, uses requests, small FPS cost
+    interval_s: int = Field(default=30, ge=15, le=120)   # one tip request every N seconds
+    frames: int = Field(default=5, ge=2, le=10)          # screenshots per request (one every 2 s)
+    max_tips_per_day: int = Field(default=60, ge=1, le=500)
+    show_seconds: int = Field(default=12, ge=4, le=60)
+    hotkey: str = "Ctrl+Shift+F11"
 
 
 class VideoSettings(BaseModel):
@@ -74,3 +86,5 @@ class AppSettings(BaseModel):
     limits: UsageLimits = Field(default_factory=UsageLimits)
     recording: RecordingSettings = Field(default_factory=RecordingSettings)
     video: VideoSettings = Field(default_factory=VideoSettings)
+    live: LiveSettings = Field(default_factory=LiveSettings)
+    clip_folders: list[str] = Field(default_factory=list)

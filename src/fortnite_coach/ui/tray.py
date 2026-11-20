@@ -30,21 +30,26 @@ class TrayController(QObject):
     open_requested = Signal()
     quit_requested = Signal()
 
-    def __init__(self, recording_controller, parent=None):
+    def __init__(self, recording_controller, parent=None, *, live=None, start=None, stop=None):
         super().__init__(parent)
         self.rc = recording_controller
+        self.live = live
         self.available = QSystemTrayIcon.isSystemTrayAvailable()
         self.tray = QSystemTrayIcon(_icon(False), self)
         menu = QMenu()
         self.a_open = QAction(menu)
         self.a_start = QAction(menu)
         self.a_stop = QAction(menu)
+        self.a_live = QAction(menu)
         self.a_quit = QAction(menu)
         self.a_open.triggered.connect(self.open_requested)
-        self.a_start.triggered.connect(self.rc.start)
-        self.a_stop.triggered.connect(self.rc.stop)
+        self.a_start.triggered.connect(start or self.rc.start)
+        self.a_stop.triggered.connect(stop or self.rc.stop)
+        if live is not None:
+            self.a_live.triggered.connect(live.toggle)
+            live.state_changed.connect(lambda _a: self.render())
         self.a_quit.triggered.connect(self.quit_requested)
-        for a in (self.a_open, self.a_start, self.a_stop):
+        for a in (self.a_open, self.a_start, self.a_stop, self.a_live):
             menu.addAction(a)
         menu.addSeparator()
         menu.addAction(self.a_quit)
@@ -63,14 +68,17 @@ class TrayController(QObject):
 
     def render(self) -> None:
         rec = self.rc.is_recording
+        live = bool(self.live is not None and self.live.active)
         self.tray.setIcon(_icon(rec))
         self.tray.setToolTip(tr("tray.tip_recording") if rec else tr("app.title"))
         self.a_open.setText(tr("tray.open"))
         self.a_start.setText(tr("rec.start"))
         self.a_stop.setText(tr("rec.stop"))
         self.a_quit.setText(tr("tray.quit"))
-        self.a_start.setEnabled(not rec)
-        self.a_stop.setEnabled(rec)
+        self.a_start.setEnabled(not rec and not live)
+        self.a_stop.setEnabled(rec or live)
+        self.a_live.setText(tr("live.turn_off") if live else tr("live.turn_on"))
+        self.a_live.setVisible(self.live is not None)
 
     def notify(self, text: str) -> None:
         if self.available:

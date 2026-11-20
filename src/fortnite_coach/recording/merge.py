@@ -79,7 +79,7 @@ def merge_parts(parts: list[str | Path], *, ffmpeg: str | None = None, ffprobe: 
                 args += ["-map", "[a]", "-c:a", "aac", "-b:a", "160k"]
             args += ["-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p",
                      "-movflags", "+faststart", str(tmp)]
-        res = run(args, timeout=3600)
+        res = run(args, timeout=3600, low_priority=True)
         if res.returncode != 0 or not tmp.is_file():
             raise VideoError(res.stderr[-300:], i18n_key="video.err_merge")
         _verify(tmp, ffprobe)

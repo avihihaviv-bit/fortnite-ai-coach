@@ -139,11 +139,17 @@ class DashboardPage(BasePage):
 
         self.priorities_card.set_title(tr("dash.priorities"), tr("dash.priorities_sub"))
         self.priorities_empty.set_text(tr("dash.empty_title"), tr("dash.priorities_empty"))
+        from fortnite_coach.coaching.resources import links_html
+
+        vids, arts = tr("learn.videos"), tr("learn.articles")
         prio = [f"{i + 1}. {code_label(r.code, False)} ({tr(f'skill.{r.skill}')}) · {tr('dash.seen_in', n=r.sessions)}"
+                f"<br>&nbsp;&nbsp;&nbsp;{links_html(r.code, r.skill, vids, arts)}"
                 for i, r in enumerate(self.repeated[:3])]
         if not prio and st.weakest:
-            prio = [f"1. {tr(f'skill.{st.weakest}')} · {tr('dash.lowest_score')}"]
-        self.priorities_list.setText("\n".join(prio))
+            prio = [f"1. {tr(f'skill.{st.weakest}')} · {tr('dash.lowest_score')}"
+                    f"<br>&nbsp;&nbsp;&nbsp;{links_html(None, st.weakest, vids, arts)}"]
+        self.priorities_list.setOpenExternalLinks(True)
+        self.priorities_list.setText("<br>".join(prio))
         self.priorities_list.setVisible(bool(prio))
         self.priorities_empty.setVisible(not prio)
         from datetime import datetime, timedelta, timezone

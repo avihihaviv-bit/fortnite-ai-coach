@@ -11,7 +11,7 @@ import threading
 from pathlib import Path
 
 from fortnite_coach.core.errors import OperationCancelledError, VideoError
-from fortnite_coach.video.ffmpeg_tools import NO_WINDOW
+from fortnite_coach.video.ffmpeg_tools import LOW_PRIORITY, NO_WINDOW
 
 
 PROXY_FPS = 10  # Gemini samples only 1-2 frames per second; 10 fps keeps motion readable at a fraction of the size
@@ -33,7 +33,7 @@ def make_proxy(ffmpeg: str, src: Path, out: Path, *, height: int, max_seconds: f
             "-vf", f"scale=-2:'min({height},ih)'", "-r", str(PROXY_FPS), "-c:v", "libx264", "-preset", "veryfast",
             "-crf", "30", "-g", str(PROXY_FPS * 2), "-pix_fmt", "yuv420p", "-c:a", "aac", "-ac", "1", "-b:a", "48k",
             "-movflags", "+faststart", str(tmp)]
-    proc = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, creationflags=NO_WINDOW)
+    proc = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, creationflags=NO_WINDOW | LOW_PRIORITY)
     waited = 0.0
     try:
         while proc.poll() is None:

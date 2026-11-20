@@ -12,8 +12,8 @@ from fortnite_coach.ui.widgets.status_pill import StatusPill
 # (section i18n key, [nav keys])
 NAV_SECTIONS: list[tuple[str, list[str]]] = [
     ("nav.section.overview", ["dashboard", "profile"]),
-    ("nav.section.analyze", ["gameplay", "training_sessions"]),
-    ("nav.section.skills", ["building", "editing", "piece_control", "aim", "movement", "game_sense"]),
+    ("nav.section.analyze", ["gameplay", "training_sessions", "clips"]),
+    ("nav.section.skills", ["building", "editing", "piece_control", "aim", "movement", "mechanics", "game_sense"]),
     ("nav.section.improve", ["training_plan", "progress", "history"]),
     ("nav.section.app", ["help", "settings"]),
 ]
@@ -67,11 +67,14 @@ class Sidebar(QFrame):
     def set_current(self, key: str) -> None:
         self.buttons[key].setChecked(True)
 
-    def set_recording(self, active: bool, elapsed_s: float) -> None:
-        self.rec_pill.setVisible(active)
+    def set_recording(self, active: bool, elapsed_s: float, live: bool = False) -> None:
+        self.rec_pill.setVisible(active or live)
+        m, sec = divmod(int(elapsed_s), 60)
         if active:
-            m, sec = divmod(int(elapsed_s), 60)
-            self.rec_pill.set_state("error", f"REC  {m:02d}:{sec:02d}", tr("rec.recording"))
+            text = f"REC  {m:02d}:{sec:02d}" + ("  ·  LIVE" if live else "")
+            self.rec_pill.set_state("error", text, tr("rec.recording"))
+        elif live:
+            self.rec_pill.set_state("ok", "LIVE COACH", tr("live.on"))
 
     def set_gemini_status(self, status: GeminiStatus) -> None:
         self._gemini = status

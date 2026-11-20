@@ -31,5 +31,6 @@ SKILL_PAGES: tuple[Skill, ...] = (
     Skill.PIECE_CONTROL,
     Skill.AIM,
     Skill.MOVEMENT,
+    Skill.MECHANICS,
     Skill.GAME_SENSE,
 )

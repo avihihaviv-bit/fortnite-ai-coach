@@ -93,6 +93,20 @@ CRITERIA: dict[Skill, tuple[Criterion, ...]] = {
         _c("dodging", "Dodging", "התחמקות"),
         _c("fight_positioning", "Positioning during fights", "מיקום בזמן קרב"),
     ),
+    Skill.MECHANICS: (
+        _c("pre_firing", "Pre-firing (shooting the spot before the opponent appears / before the edit opens)",
+           "פרי-פייר (ירייה למקום לפני שהיריב מופיע / לפני שהעריכה נפתחת)"),
+        _c("weapon_swaps", "Fast weapon swaps (shotgun → SMG/AR) and swap timing", "החלפות נשק מהירות (שוטגאן ← SMG/AR) ותזמון ההחלפה"),
+        _c("build_edit_combos", "Build-edit combos in one flow (wall-replace, double edit, edit-place-shoot)",
+           "קומבינציות בנייה-עריכה ברצף (wall replace, עריכה כפולה, עריכה-בנייה-ירייה)"),
+        _c("cranking", "Cranking 90s / speed builds without breaking the sequence", "קרנקינג 90s / בנייה מהירה בלי לשבור את הרצף"),
+        _c("side_jumps", "Side jumps and jump-wall retakes", "קפיצות לצד וריטייק עם קיר בקפיצה"),
+        _c("waterfall_ramp_rush", "Waterfalling down safely and ramp rushing with protection", "ירידת מפל (Waterfall) בטוחה וראמפ ראש מוגן"),
+        _c("thwifo_mongraal_cone", "Thwifo cone / Mongraal-style edit plays", "קונוס Thwifo / מהלכי עריכה בסגנון Mongraal"),
+        _c("double_edits_shots", "Double edits and peek-shots through edits", "עריכות כפולות וירי פיק דרך עריכות"),
+        _c("piece_swaps", "Piece swaps / wall replacements under pressure", "החלפת חלקים / wall replace תחת לחץ"),
+        _c("jump_shots_crouch", "Jump shots, crouch peeks and shot timing in the air", "יריות בקפיצה, פיקים בכריעה ותזמון ירייה באוויר"),
+    ),
     Skill.GAME_SENSE: (
         _c("rotations", "Rotations", "רוטציות"),
         _c("zone_awareness", "Zone awareness", "מודעות לאזור"),
@@ -125,6 +139,7 @@ _B, _E, _P, _A, _M, _G, _F = (
     Skill.BUILDING, Skill.EDITING, Skill.PIECE_CONTROL, Skill.AIM, Skill.MOVEMENT, Skill.GAME_SENSE,
     Skill.FIGHT_EXECUTION,
 )
+_X = Skill.MECHANICS
 
 MISTAKES: tuple[MistakeType, ...] = (
     # Building
@@ -163,6 +178,21 @@ MISTAKES: tuple[MistakeType, ...] = (
     _m("MOVE_PREDICTABLE_STRAFE", _M, "Predictable strafe pattern", "דפוס סטרייף צפוי"),
     _m("MOVE_BAD_JUMP", _M, "Jump at the wrong moment made the player an easy target", "קפיצה ברגע הלא נכון הפכה אותך למטרה קלה"),
     _m("MOVE_INEFFICIENT_PATH", _M, "Inefficient movement path that cost time or exposure", "מסלול תנועה לא יעיל שעלה בזמן או בחשיפה"),
+    # Mechanics
+    _m("MECH_NO_PRE_FIRE", _X, "Shot only after the opponent appeared instead of pre-firing the opening",
+       "ירית רק אחרי שהיריב הופיע במקום פרי-פייר לפתח"),
+    _m("MECH_SLOW_SWAP", _X, "Slow or missing weapon swap after the first shot (opponent got time to reset)",
+       "החלפת נשק איטית או חסרה אחרי הירייה הראשונה (ליריב היה זמן להתאפס)"),
+    _m("MECH_BROKEN_SEQUENCE", _X, "Build/edit sequence broke midway (wrong piece, missed placement, double-confirm)",
+       "רצף בנייה/עריכה נשבר באמצע (חלק לא נכון, הנחה שהוחטאה, אישור כפול)"),
+    _m("MECH_UNSAFE_WATERFALL", _X, "Waterfalled/dropped down without protection and took damage",
+       "ירידת מפל/נפילה בלי הגנה וספגת נזק"),
+    _m("MECH_RAMP_RUSH_NO_COVER", _X, "Ramp rush without walls/cones; got shot through the ramp",
+       "ראמפ ראש בלי קירות/קונוסים; נפגעת דרך הרמפה"),
+    _m("MECH_MISSED_JUMP_SHOT", _X, "Jump shot or air shot fired at the wrong time and missed",
+       "ירייה בקפיצה/באוויר בתזמון לא נכון שהחטיאה"),
+    _m("MECH_SLOW_PIECE_SWAP", _X, "Did not replace a broken wall fast enough (no piece swap)",
+       "לא החלפת קיר שבור מספיק מהר (בלי piece swap)"),
     # Game sense
     _m("GS_LATE_ROTATION", _G, "Rotated too late; forced into a bad position or storm", "רוטציה מאוחרת מדי, נכפה מיקום גרוע או סטורם"),
     _m("GS_BAD_FIGHT_SELECTION", _G, "Took a fight with a clear disadvantage", "כניסה לקרב עם חיסרון ברור"),
@@ -233,6 +263,16 @@ GOOD_PLAYS: tuple[GoodPlayType, ...] = (
     _g("AIM_PREAIM_READY", _A, "Pre-aimed the right spot before the opponent appeared", "כיוון מראש למקום הנכון לפני שהיריב הופיע"),
     _g("MOVE_DODGE_PEEK", _M, "Movement that dodged shots while peeking", "תנועה שהתחמקה מיריות בזמן פיק"),
     _g("MOVE_EFFICIENT", _M, "Efficient movement that saved time or exposure", "תנועה יעילה שחסכה זמן או חשיפה"),
+    _g("MECH_PRE_FIRE_HIT", _X, "Pre-fired the opening and hit as the opponent appeared / the edit opened",
+       "פרי-פייר לפתח שפגע ברגע שהיריב הופיע / העריכה נפתחה"),
+    _g("MECH_FAST_SWAP", _X, "Fast shotgun → SMG/AR swap that finished or chunked the opponent",
+       "החלפה מהירה משוטגאן ל-SMG/AR שסיימה או פגעה חזק ביריב"),
+    _g("MECH_CLEAN_COMBO", _X, "Clean build-edit-shoot combo in one flow", "קומבו בנייה-עריכה-ירייה נקי ברצף אחד"),
+    _g("MECH_CRANK_HEIGHT", _X, "Cranked 90s / speed build that won the height cleanly", "קרנקינג 90s / בנייה מהירה שניצחה בגובה בצורה נקייה"),
+    _g("MECH_THWIFO_OR_CLASSIC", _X, "Advanced edit play (Thwifo cone, Mongraal-style, double edit) that created a free shot",
+       "מהלך עריכה מתקדם (קונוס Thwifo, סגנון Mongraal, עריכה כפולה) שיצר ירייה חופשית"),
+    _g("MECH_SAFE_WATERFALL", _X, "Safe protected waterfall / ramp rush into a fight", "ירידת מפל / ראמפ ראש מוגנים לתוך קרב"),
+    _g("MECH_PIECE_SWAP", _X, "Instant wall replace / piece swap that blocked damage", "החלפת קיר מיידית / piece swap שחסמה נזק"),
     _g("GS_SMART_ROTATION", _G, "Smart early rotation to a strong position", "רוטציה מוקדמת וחכמה למיקום חזק"),
     _g("GS_GOOD_DISENGAGE", _G, "Disengaged at the right moment", "התנתקות ברגע הנכון"),
     _g("GS_THIRD_PARTY_AVOIDED", _G, "Avoided or punished a third party", "נמנעת מצד שלישי או ניצלת אותו"),

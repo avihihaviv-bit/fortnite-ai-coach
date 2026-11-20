@@ -65,7 +65,7 @@ class UsageSummary:
     per_day: list[tuple[str, int, int, int]] = field(default_factory=list)  # (date, sent, cache, failed)
 
 
-SENT_KINDS = ("analysis", "upload", "knowledge")
+SENT_KINDS = ("analysis", "upload", "knowledge", "live")
 
 
 def summary(db: Database, days: int) -> UsageSummary:
@@ -95,3 +95,10 @@ def summary(db: Database, days: int) -> UsageSummary:
         out.tokens_out += tout or 0
     out.per_day = [(k, *v) for k, v in sorted(day.items(), reverse=True)]
     return out
+
+
+
+def live_requests_today(db: Database) -> int:
+    with db.session() as s:
+        return s.scalar(select(func.count(ApiUsage.id)).where(ApiUsage.timestamp >= _today_start(),
+                                                              ApiUsage.kind == "live")) or 0

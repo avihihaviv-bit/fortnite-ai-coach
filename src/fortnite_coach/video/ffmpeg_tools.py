@@ -15,6 +15,8 @@ ENV_FFPROBE = "FORTNITE_COACH_FFPROBE"
 
 # On Windows, prevent a console window from flashing for every ffmpeg call.
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+# Background video work runs below normal priority so a running game keeps the CPU first.
+LOW_PRIORITY = getattr(subprocess, "BELOW_NORMAL_PRIORITY_CLASS", 0)
 
 
 def _bundled_dir() -> Path:
@@ -45,8 +47,9 @@ def find_ffprobe(configured: str | None = None) -> str:
     return _find("ffprobe", configured, ENV_FFPROBE)
 
 
-def run(args: list[str], timeout: float = 60) -> subprocess.CompletedProcess:
+def run(args: list[str], timeout: float = 60, low_priority: bool = False) -> subprocess.CompletedProcess:
     return subprocess.run(
-        args, capture_output=True, text=True, timeout=timeout, creationflags=NO_WINDOW,
+        args, capture_output=True, text=True, timeout=timeout,
+        creationflags=NO_WINDOW | (LOW_PRIORITY if low_priority else 0),
         encoding="utf-8", errors="replace",
     )

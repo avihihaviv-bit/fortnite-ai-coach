@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QUrl
+from PySide6.QtCore import Qt, QUrl, Signal
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QHBoxLayout, QHeaderView, QLabel, QMessageBox, QProgressBar, QPushButton, QTableWidget, QTableWidgetItem,
@@ -35,6 +35,103 @@ def _open(path: Path) -> None:
 def _wrap(label: QLabel) -> QLabel:
     label.setWordWrap(True)
     return label
+
+
+class LiveCard(Card):
+    """Live Coach settings. Off until the player reads the limits and ticks the box."""
+
+    saved = Signal()
+
+    def __init__(self, ctx: AppContext):
+        from PySide6.QtWidgets import QCheckBox, QFormLayout, QSpinBox
+
+        from fortnite_coach.ui.widgets.hotkey_edit import HotkeyEdit
+
+        super().__init__()
+        self.ctx = ctx
+        self.warning = _wrap(QLabel(objectName="ReasonBox"))
+        self.ack = QCheckBox()
+        form = QFormLayout()
+        form.setHorizontalSpacing(16)
+        self.labels = {k: QLabel() for k in ("interval", "frames", "max", "show", "hotkey")}
+        self.interval = QSpinBox()
+        self.interval.setRange(15, 120)
+        self.frames = QSpinBox()
+        self.frames.setRange(2, 10)
+        self.max_day = QSpinBox()
+        self.max_day.setRange(1, 500)
+        self.show_s = QSpinBox()
+        self.show_s.setRange(4, 60)
+        self.hotkey = HotkeyEdit()
+        for k, w in (("interval", self.interval), ("frames", self.frames), ("max", self.max_day),
+                     ("show", self.show_s), ("hotkey", self.hotkey)):
+            form.addRow(self.labels[k], w)
+        row = QHBoxLayout()
+        self.save_btn = QPushButton(objectName="PrimaryButton")
+        self.save_btn.clicked.connect(self.save)
+        self.preview_btn = QPushButton()
+        self.preview_btn.clicked.connect(lambda: self.ctx.preview_tip(tr("live.preview_text")))
+        row.addWidget(self.save_btn)
+        row.addWidget(self.preview_btn)
+        row.addStretch(1)
+        self.feedback = _wrap(QLabel(objectName="StatHint"))
+        self.body.addWidget(self.warning)
+        self.body.addWidget(self.ack)
+        self.body.addLayout(form)
+        self.body.addLayout(row)
+        self.body.addWidget(self.feedback)
+        self._msg = ""
+        self.load()
+
+    def load(self) -> None:
+        lv = self.ctx.settings().live
+        self.ack.setChecked(lv.acknowledged)
+        self.interval.setValue(lv.interval_s)
+        self.frames.setValue(lv.frames)
+        self.max_day.setValue(lv.max_tips_per_day)
+        self.show_s.setValue(lv.show_seconds)
+        self.hotkey.setText(lv.hotkey)
+
+    def save(self) -> None:
+        from fortnite_coach.recording.hotkeys import HotkeyError, parse_hotkey
+
+        s = self.ctx.settings()
+        key = self.hotkey.text().strip()
+        try:
+            combo = parse_hotkey(key)
+            if combo in (parse_hotkey(s.recording.hotkey_start), parse_hotkey(s.recording.hotkey_stop)):
+                raise HotkeyError("same")
+        except HotkeyError:
+            self._msg = "⚠  " + tr("live.err_hotkey")
+            self.render()
+            return
+        lv = s.live.model_copy()
+        lv.acknowledged = self.ack.isChecked()
+        lv.interval_s, lv.frames = self.interval.value(), self.frames.value()
+        lv.max_tips_per_day, lv.show_seconds, lv.hotkey = self.max_day.value(), self.show_s.value(), key
+        s.live = lv
+        self.ctx.save_settings(s)
+        self._msg = tr("live.saved")
+        self.saved.emit()
+        self.render()
+
+    def render(self) -> None:
+        s = self.ctx.settings()
+        self.set_title(tr("live.title"), tr("live.subtitle"))
+        self.warning.setText(tr("live.warning"))
+        self.ack.setText(tr("live.ack"))
+        for k in self.labels:
+            self.labels[k].setText(tr(f"live.f_{k}"))
+        self.interval.setSuffix(" " + tr("live.sec"))
+        self.show_s.setSuffix(" " + tr("live.sec"))
+        self.save_btn.setText(tr("common.save"))
+        self.preview_btn.setText(tr("live.preview"))
+        used = usage_tracker.live_requests_today(self.ctx.db)
+        per_hour = 3600 // max(1, s.live.interval_s)
+        lines = [tr("live.usage", used=used, limit=s.live.max_tips_per_day, per_hour=per_hour)]
+        if self._msg:
+            lines.insert(0, self._msg)
+        self.feedback.setText("\n".join(lines))
 
 
 class UsageCard(Card):

@@ -159,6 +159,32 @@ class GeminiService:
         self._with_retries(lambda: self.client.models.generate_content(
             model=target, contents=self.PING, config=types.GenerateContentConfig(max_output_tokens=64, temperature=0)))
 
+    def live_tip(self, frames: list[bytes], system_instruction: str, prompt: str) -> GenerateResult:
+        """Live Coach: a few JPEG screenshots in, one short tip out. Kept small and fast."""
+        from google.genai import types
+
+        cfg = dict(system_instruction=system_instruction, max_output_tokens=200, temperature=0.3,
+                   media_resolution=types.MediaResolution.MEDIA_RESOLUTION_LOW)
+        if self.model.startswith("gemini-2.5") and "pro" not in self.model:
+            cfg["thinking_config"] = types.ThinkingConfig(thinking_budget=0)  # lower latency
+        parts = [types.Part(inline_data=types.Blob(data=f, mime_type="image/jpeg")) for f in frames]
+        parts.append(types.Part(text=prompt))
+        contents = [types.Content(role="user", parts=parts)]
+
+        def call():
+            resp = self.client.models.generate_content(model=self.model, contents=contents,
+                                                       config=types.GenerateContentConfig(**cfg))
+            usage = getattr(resp, "usage_metadata", None)
+            return GenerateResult(getattr(resp, "text", None) or "", getattr(usage, "prompt_token_count", None),
+                                  getattr(usage, "candidates_token_count", None))
+
+        # one quick attempt; the next tip comes soon anyway
+        saved, self.max_retries = self.max_retries, 0
+        try:
+            return self._with_retries(call)
+        finally:
+            self.max_retries = saved
+
     def list_models(self) -> list[str]:
         def call():
             names = []
