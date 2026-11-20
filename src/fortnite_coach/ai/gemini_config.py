@@ -50,5 +50,14 @@ def usable_models(names) -> list[str]:
     return sorted({n for n in names if is_flash_candidate(n)}, key=_rank, reverse=True)
 
 
+def live_model(available, main: str, chosen: str = "") -> str:
+    """Model for Live Coach tips. Auto = the best "flash-lite" model the key can use: Google counts the free quota
+    per model, so Live then does not eat the quota of the main analysis model (and lite answers faster)."""
+    if chosen:
+        return chosen
+    lites = [n for n in usable_models(available or []) if "lite" in n.lower()]
+    return lites[0] if lites else main
+
+
 def is_allowed(model: str) -> bool:
     return model in ALLOWED_MODELS or is_flash_candidate(model)

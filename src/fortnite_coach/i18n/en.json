@@ -588,7 +588,7 @@
   "live.saved": "Live Coach settings saved.",
   "live.title": "Live Coach (experimental)",
   "live.subtitle": "Short tips in the top-left corner while you play, from a few screenshots.",
-  "live.warning": "Before you turn it on:\n• Use it for practice: Creative, Free Build, Box Fights, Zone Wars with friends. Do NOT use it in Ranked or tournaments: real-time help from third-party tools can break Epic's competitive rules.\n• It sees 1 screenshot every 2 seconds and tips arrive about 5–20 seconds later, so it coaches situations and habits (protection, high ground, heals, storm, materials), not sub-second edits. The full analysis after the game is far more precise.\n• Each tip is one Gemini request from your Free Tier quota (the same quota used by video analysis).\n• Small FPS cost (screen capture). Fortnite must be in Windowed Fullscreen to see the tips over the game.\n• It only looks at the screen like a viewer: no game memory, no input, no automation.",
+  "live.warning": "Before you turn it on:\n• Use it for practice: Creative, Free Build, Box Fights, Zone Wars with friends. Do NOT use it in Ranked or tournaments: real-time help from third-party tools can break Epic's competitive rules.\n• It sees 1 screenshot every 2 seconds and tips arrive about 5–20 seconds later, so it coaches situations and habits (protection, high ground, heals, storm, materials), not sub-second edits. The full analysis after the game is far more precise.\n• Each tip is one Gemini request from your Free Tier quota (by default from a separate Flash-Lite model, so video analysis keeps its quota).\n• Small FPS cost (screen capture). Fortnite must be in Windowed Fullscreen to see the tips over the game.\n• It only looks at the screen like a viewer: no game memory, no input, no automation.",
   "live.ack": "I understand. Turn on Live Coach (practice only).",
   "live.f_interval": "Tip every",
   "live.f_frames": "Screenshots per tip",
@@ -614,5 +614,9 @@
   "help.live.body": "• Turn it on once: Settings → Live Coach → read the limits → tick the box → Save. Use <b>Preview the overlay</b> to see where tips appear.<br>• On the Record card choose <b>Live Coach only</b> or <b>Record video + Live Coach</b>, then Start (or the start hotkey). On/off at any time: <b>{live}</b>.<br>• Practice only (Creative, Box Fights, Zone Wars). Not in Ranked or tournaments.<br>• Tips arrive ~5–20 s after the moment and each tip is one free-tier request. Needs Windowed Fullscreen to show over the game.",
   "help.clips.title": "Clip library (Medal and others)",
   "help.clips.body": "• Clip library finds Medal, NVIDIA, Xbox Game Bar and this app's folders automatically. Add any other folder with <b>Add folder…</b>.<br>• Double-click a clip to open it, or tick up to 10 and click <b>Analyze selected</b>: the app shows the total requests first, then analyzes them one after another.<br>• Medal folder: Medal → Settings → Recording → Clip folder.",
-  "live.warning_fails": "Live Coach: Gemini is not answering ({reason}). Still trying…"
+  "live.warning_fails": "Live Coach: Gemini is not answering ({reason}). Still trying…",
+  "live.f_model": "Model for Live",
+  "live.model_auto": "Automatic (Flash-Lite if available)",
+  "live.model_note_lite": "Live uses {model}: Google counts free quota per model, so tips do not use up the quota of your analysis model.",
+  "live.model_note_same": "Live uses {model}, the same model as video analysis: tips use the same daily free quota. Run Test connection to find a Flash-Lite model, or lower the tips per day."
 }

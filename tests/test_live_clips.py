@@ -144,6 +144,7 @@ def test_live_stops_on_fatal_error(win):
     w, client, qtbot = win
     connect(w, qtbot)
     _enable_live(w)
+    w.settings.live.model = w.settings.gemini.model  # same model: nothing to fall back to
     client._responses = [FakeAPIError(429, "RESOURCE_EXHAUSTED quota limit: 0 TEST DATA")]
     assert w.live.start()
     qtbot.waitUntil(lambda: len(w.live.capture.latest(5)) >= 2, timeout=20000)
@@ -352,3 +353,19 @@ def test_live_warns_after_repeated_failures(win):
         w.live._failed(FakeAPIError(503, "UNAVAILABLE TEST DATA"), "m")
     assert seen == ["gemini.err_server"] and w.live.active
     assert "not answering" in w.overlay.text
+
+
+def test_live_model_auto_prefers_lite_and_falls_back(win):
+    from fortnite_coach.ai.gemini_config import live_model
+
+    assert live_model(["gemini-2.5-flash", "gemini-2.5-flash-lite"], "gemini-2.5-flash") == "gemini-2.5-flash-lite"
+    assert live_model(["gemini-2.5-flash"], "gemini-2.5-flash") == "gemini-2.5-flash"
+    assert live_model(["gemini-2.5-flash-lite"], "gemini-2.5-flash", "gemini-2.5-flash") == "gemini-2.5-flash"
+    w, client, qtbot = win
+    connect(w, qtbot)  # fake key lists flash + flash-lite
+    _enable_live(w)
+    assert w.live.start()
+    assert w.live.model == "gemini-2.5-flash-lite"
+    assert "separately" in w.settings_page.live_card.feedback.text() or "per model" in w.settings_page.live_card.feedback.text()
+    w.live._failed(FakeAPIError(429, "RESOURCE_EXHAUSTED limit: 0 TEST DATA"), w.live.model)
+    assert w.live.active and w.live.model == w.settings.gemini.model  # switched instead of stopping

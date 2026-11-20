@@ -43,7 +43,7 @@ class LiveCard(Card):
     saved = Signal()
 
     def __init__(self, ctx: AppContext):
-        from PySide6.QtWidgets import QCheckBox, QFormLayout, QSpinBox
+        from PySide6.QtWidgets import QCheckBox, QComboBox, QFormLayout, QSpinBox
 
         from fortnite_coach.ui.widgets.hotkey_edit import HotkeyEdit
 
@@ -53,7 +53,8 @@ class LiveCard(Card):
         self.ack = QCheckBox()
         form = QFormLayout()
         form.setHorizontalSpacing(16)
-        self.labels = {k: QLabel() for k in ("interval", "frames", "max", "show", "hotkey")}
+        self.labels = {k: QLabel() for k in ("model", "interval", "frames", "max", "show", "hotkey")}
+        self.model_combo = QComboBox()
         self.interval = QSpinBox()
         self.interval.setRange(15, 120)
         self.frames = QSpinBox()
@@ -63,7 +64,7 @@ class LiveCard(Card):
         self.show_s = QSpinBox()
         self.show_s.setRange(4, 60)
         self.hotkey = HotkeyEdit()
-        for k, w in (("interval", self.interval), ("frames", self.frames), ("max", self.max_day),
+        for k, w in (("model", self.model_combo), ("interval", self.interval), ("frames", self.frames), ("max", self.max_day),
                      ("show", self.show_s), ("hotkey", self.hotkey)):
             form.addRow(self.labels[k], w)
         row = QHBoxLayout()
@@ -91,6 +92,23 @@ class LiveCard(Card):
         self.max_day.setValue(lv.max_tips_per_day)
         self.show_s.setValue(lv.show_seconds)
         self.hotkey.setText(lv.hotkey)
+        self._fill_models()
+
+    def _fill_models(self) -> None:
+        from fortnite_coach.ai.gemini_config import usable_models
+
+        s = self.ctx.settings()
+        current = self.model_combo.currentData() if self.model_combo.count() else s.live.model
+        self.model_combo.blockSignals(True)
+        self.model_combo.clear()
+        self.model_combo.addItem(tr("live.model_auto"), "")
+        names = usable_models(s.gemini.available_models) or [s.gemini.model]
+        if current and current not in names:
+            names.append(current)
+        for n in names:
+            self.model_combo.addItem(n, n)
+        self.model_combo.setCurrentIndex(max(0, self.model_combo.findData(current)))
+        self.model_combo.blockSignals(False)
 
     def save(self) -> None:
         from fortnite_coach.recording.hotkeys import HotkeyError, parse_hotkey
@@ -109,6 +127,7 @@ class LiveCard(Card):
         lv.acknowledged = self.ack.isChecked()
         lv.interval_s, lv.frames = self.interval.value(), self.frames.value()
         lv.max_tips_per_day, lv.show_seconds, lv.hotkey = self.max_day.value(), self.show_s.value(), key
+        lv.model = self.model_combo.currentData() or ""
         s.live = lv
         self.ctx.save_settings(s)
         self._msg = tr("live.saved")
@@ -126,9 +145,14 @@ class LiveCard(Card):
         self.show_s.setSuffix(" " + tr("live.sec"))
         self.save_btn.setText(tr("common.save"))
         self.preview_btn.setText(tr("live.preview"))
+        from fortnite_coach.ai.gemini_config import live_model
+
+        self._fill_models()  # the model list changes after Test connection / language change
+        picked = live_model(s.gemini.available_models, s.gemini.model, s.live.model)
         used = usage_tracker.live_requests_today(self.ctx.db)
         per_hour = 3600 // max(1, s.live.interval_s)
-        lines = [tr("live.usage", used=used, limit=s.live.max_tips_per_day, per_hour=per_hour)]
+        lines = [tr("live.usage", used=used, limit=s.live.max_tips_per_day, per_hour=per_hour),
+                 tr("live.model_note_lite" if picked != s.gemini.model else "live.model_note_same", model=picked)]
         if self._msg:
             lines.insert(0, self._msg)
         self.feedback.setText("\n".join(lines))

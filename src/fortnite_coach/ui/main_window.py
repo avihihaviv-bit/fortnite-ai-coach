@@ -135,11 +135,11 @@ class MainWindow(QMainWindow):
     def gemini_status(self) -> GeminiStatus:
         return current_status(self.key_store.has_key(), self.settings.gemini.last_test_ok)
 
-    def make_gemini_service(self):
+    def make_gemini_service(self, model: str | None = None):
         from fortnite_coach.ai.gemini_service import GeminiService
 
         g = self.settings.gemini
-        return GeminiService(self.key_store.load, g.model, timeout_s=g.request_timeout_s, max_retries=g.max_retries,
+        return GeminiService(self.key_store.load, model or g.model, timeout_s=g.request_timeout_s, max_retries=g.max_retries,
                              client_factory=self.client_factory)
 
     def open_report(self, report_id: int, banner: str = "") -> None:

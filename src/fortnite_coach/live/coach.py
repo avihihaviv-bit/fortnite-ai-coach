@@ -92,12 +92,19 @@ class LiveCoach(QObject):
         self._fails = 0
         self.last_error: str | None = None
         self._service = None
+        self.model = ""
         self._started_at = 0.0
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._on_timer)
         self._watch = QTimer(self)  # restarts the screenshot capture quickly if Windows cut it off
         self._watch.setInterval(2000)
         self._watch.timeout.connect(lambda: self.capture.ensure_running() if self.capture else None)
+
+    def pick_model(self) -> str:
+        from fortnite_coach.ai.gemini_config import live_model
+
+        s = self._settings()
+        return live_model(s.gemini.available_models, s.gemini.model, s.live.model)
 
     @property
     def active(self) -> bool:
@@ -128,7 +135,8 @@ class LiveCoach(QObject):
             self.capture = FrameCapture(ffmpeg, folder, source=self._source_override or "ddagrab",
                                         monitor_index=s.recording.monitor_index)
             self.capture.start()
-            self._service = self._service_factory()
+            self.model = self.pick_model()
+            self._service = self._service_factory(self.model)
         except Exception as e:  # ffmpeg missing, no key...
             log.warning("Live coach could not start: %s", e)
             self._cleanup()
@@ -200,7 +208,7 @@ class LiveCoach(QObject):
         prompt = PROMPT[lang]
         if self.recent_tips:
             prompt += "\n" + AVOID[lang] + " " + " | ".join(self.recent_tips)
-        service, model = self._service, s.gemini.model
+        service, model = self._service, self.model
         self.busy = True
         run_task(lambda: service.live_tip(frames, SYSTEM[lang], prompt),
                  lambda res: self._done(res, model), lambda err: self._failed(err, model))
@@ -221,6 +229,14 @@ class LiveCoach(QObject):
         key = getattr(err, "i18n_key", None) or classify(err).i18n_key
         usage_tracker.record(self.db, model=model, kind="live", success=False, error_code=key)
         log.warning("Live tip failed: %s", key)
+        main = self._settings().gemini.model
+        if key in ("gemini.err_model", "gemini.err_no_free_quota", "gemini.err_quota_daily") and self.model != main \
+                and self.active:
+            # the separate Live model is not usable / used up: continue with the tested main model
+            log.warning("Live model %s failed (%s); switching to %s", self.model, key, main)
+            self.model = main
+            self._service = self._service_factory(main)
+            return
         if key in FATAL_KEYS:
             self._fail(key)
             return
