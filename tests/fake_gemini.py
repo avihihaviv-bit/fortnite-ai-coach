@@ -48,7 +48,7 @@ class FakeClient:
         self.files = SimpleNamespace(upload=self._upload, get=lambda name: self._file)
         self.models = SimpleNamespace(list=self._list, generate_content=self._generate)
 
-    def _list(self):
+    def _list(self, config=None):
         if self._list_error:
             raise self._list_error
         return [SimpleNamespace(name=f"models/{m}", supported_actions=["generateContent"]) for m in self._models]

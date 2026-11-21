@@ -32,7 +32,8 @@ def combo_text(key: int, mods) -> str | None:
     if mods & Qt.KeyboardModifier.ShiftModifier:
         parts.append("Shift")
     if not parts:
-        return None  # a plain key would steal a game key
+        # a function key alone is allowed (F2); a plain letter/number would steal a game key
+        return name if name.startswith("F") and name[1:].isdigit() else None
     return "+".join([*parts, name])
 
 

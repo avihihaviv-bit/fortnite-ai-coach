@@ -29,6 +29,8 @@ from fortnite_coach.ui.sidebar import NAV_KEYS, Sidebar
 
 
 class MainWindow(QMainWindow):
+    TEST_GIVE_UP_MS = 100_000
+
     def __init__(self, db: Database, paths: AppPaths, *, key_store: KeyStore | None = None,
                  recording_source: str | None = None, client_factory=None) -> None:
         from fortnite_coach.live.coach import LiveCoach
@@ -59,6 +61,7 @@ class MainWindow(QMainWindow):
         )
         self.hotkeys = HotkeyManager(QApplication.instance(), lambda: int(self.winId()))
         self.hotkey_errors: list[str] = []
+        self.startup_errors: list[str] = []
         self.setMinimumSize(1100, 700)
         self.resize(1360, 860)
         root = QWidget(objectName="Root")
@@ -107,9 +110,11 @@ class MainWindow(QMainWindow):
         for key in ("gameplay", "training_sessions"):
             self.pages[key].video_imported.connect(self.refresh_data)
         self.recording.capabilities_ready.connect(self._on_capabilities)
+        self.recording.finished.connect(self._on_recording_finished)
+        self.recording.failed.connect(self._on_recording_failed_flash)
         self.recording.state_changed.connect(lambda _s: self._on_session_changed())
         self.recording.tick.connect(lambda _t: self._render_recording_indicator())
-        self.register_hotkeys()
+        self._safe("hotkeys", self.register_hotkeys)
         from fortnite_coach.ui.tray import TrayController
 
         self.tray = TrayController(self.recording, self, live=self.live, start=self.start_session,
@@ -123,13 +128,23 @@ class MainWindow(QMainWindow):
         get_translator().on_change(self._on_language_changed)
         get_translator().set_language(self.settings.language.value)
 
-        self.refresh_gemini_status()
-        self.refresh_data()
-        self.retranslate()
+        self._safe("gemini status", self.refresh_gemini_status)
+        self._safe("data", self.refresh_data)
+        self._safe("texts", self.retranslate)
         self.navigate("dashboard")
         if self.settings.hardware_checked and recording_source is None:
             # A few short ffmpeg checks in the background, so the start hotkey works right away from the tray.
-            self.recording.detect()
+            self._safe("hardware check", self.recording.detect)
+
+    def _safe(self, what: str, fn) -> None:
+        """Optional startup steps must never stop the window from opening."""
+        import logging
+
+        try:
+            fn()
+        except Exception:
+            logging.getLogger(__name__).exception("Startup step failed: %s", what)
+            self.startup_errors.append(what)
 
     # ---- gemini / recording ------------------------------------------------
     def gemini_status(self) -> GeminiStatus:
@@ -163,8 +178,29 @@ class MainWindow(QMainWindow):
             return
         service = self.make_gemini_service()
         self.settings_page.set_testing(True)
+        self._test_gen = getattr(self, "_test_gen", 0) + 1
+        gen = self._test_gen
+
+        def give_up():  # safety net: Google never answered (blocked network / firewall / VPN)
+            if gen == self._test_gen and self.settings_page.testing:
+                self._test_gen += 1  # a late answer is ignored
+                g = self.settings.gemini.model_copy()
+                from datetime import datetime, timezone
+
+                g.last_test_ok, g.last_test_error, g.last_test_detail = False, "gemini.err_test_timeout", ""
+                g.last_test_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+                self.settings.gemini = g
+                self._save_settings(self.settings)
+                self.settings_page.set_testing(False)
+                self.refresh_gemini_status()
+
+        from PySide6.QtCore import QTimer
+
+        QTimer.singleShot(self.TEST_GIVE_UP_MS, give_up)
 
         def done(result):
+            if gen != self._test_gen:
+                return
             g = self.settings.gemini.model_copy()
             g.last_test_ok, g.last_test_at, g.last_test_error = result.ok, result.tested_at, result.error_key
             g.last_test_detail = result.detail
@@ -181,6 +217,8 @@ class MainWindow(QMainWindow):
             self.refresh_gemini_status()
 
         def failed(err):
+            if gen != self._test_gen:
+                return
             self.settings_page.set_testing(False)
             self.refresh_gemini_status()
 
@@ -207,8 +245,10 @@ class MainWindow(QMainWindow):
         rec = self.settings.recording
         if not rec.hotkeys_enabled:
             return
-        for combo, action in ((rec.hotkey_start, self.start_session), (rec.hotkey_stop, self.stop_session),
-                              (self.settings.live.hotkey, self.live.toggle)):
+        for combo, action in ((rec.hotkey_toggle, self.toggle_recording), (self.settings.live.hotkey, self.toggle_live),
+                              (rec.hotkey_start, self.start_session), (rec.hotkey_stop, self.stop_session)):
+            if not combo:
+                continue
             try:
                 if not self.hotkeys.register(combo, action):
                     self.hotkey_errors.append(combo)
@@ -227,6 +267,40 @@ class MainWindow(QMainWindow):
             self.recording.start()
         if mode in ("live", "record_live"):
             self.live.start()
+
+    def toggle_recording(self) -> None:
+        """One key (default F2): start or stop a regular recording, whatever mode the record card shows."""
+        if self.recording.is_recording:
+            self.recording.stop()
+        elif self.recording.start():
+            self._flash(tr("rec.flash_started"))
+
+    def toggle_live(self) -> None:
+        """One key (default F3): Live Coach on/off."""
+        if self.live.active:
+            self.live.stop()
+            self._flash(tr("live.flash_off"))
+        elif self.live.start():
+            self._flash(tr("live.flash_on"))
+
+    def _flash(self, text: str) -> None:
+        """Short confirmation in the top-left corner, visible in-game (hotkeys give no other feedback there)."""
+        self.overlay.monitor_index = self.settings.recording.monitor_index
+        self.overlay.show_tip(text, 3)
+
+    def _on_recording_finished(self, parts) -> None:
+        if not self.settings.recording.auto_load:
+            self._flash(tr("rec.flash_saved"))
+            return
+        self._flash(tr("rec.flash_saved_loading"))
+        from PySide6.QtCore import QTimer
+
+        # after the page stored the parts: join them and load the video, ready to analyze
+        QTimer.singleShot(0, self.pages["gameplay"].load_last_recording)
+
+    def _on_recording_failed_flash(self, msg: str) -> None:
+        reason = tr(msg) if "." in msg and " " not in msg else msg[-120:]
+        self._flash(tr("rec.flash_failed", reason=reason))
 
     def stop_session(self) -> None:
         if self.live.active:

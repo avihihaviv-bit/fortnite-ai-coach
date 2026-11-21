@@ -151,13 +151,15 @@ class GeminiService:
 
     PING = "Reply with the single word OK."
 
-    def ping(self, model: str | None = None) -> None:
+    def ping(self, model: str | None = None, timeout_s: float | None = None) -> None:
         """A tiny real generation request: proves the model is usable for this key, not just listed."""
         from google.genai import types
 
         target = model or self.model
+        http = types.HttpOptions(timeout=int(timeout_s * 1000)) if timeout_s else None
         self._with_retries(lambda: self.client.models.generate_content(
-            model=target, contents=self.PING, config=types.GenerateContentConfig(max_output_tokens=64, temperature=0)))
+            model=target, contents=self.PING,
+            config=types.GenerateContentConfig(max_output_tokens=64, temperature=0, http_options=http)))
 
     def live_tip(self, frames: list[bytes], system_instruction: str, prompt: str) -> GenerateResult:
         """Live Coach: a few JPEG screenshots in, one short tip out. Kept small and fast."""
@@ -201,10 +203,14 @@ class GeminiService:
         finally:
             self.max_retries = saved
 
-    def list_models(self) -> list[str]:
+    def list_models(self, timeout_s: float | None = None) -> list[str]:
+        from google.genai import types
+
+        cfg = types.ListModelsConfig(http_options=types.HttpOptions(timeout=int(timeout_s * 1000))) if timeout_s else None
+
         def call():
             names = []
-            for m in self.client.models.list():
+            for m in (self.client.models.list(config=cfg) if cfg else self.client.models.list()):
                 name = getattr(m, "name", "") or ""
                 actions = getattr(m, "supported_actions", None)
                 if actions is not None and "generateContent" not in actions:

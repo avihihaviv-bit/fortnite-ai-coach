@@ -74,7 +74,8 @@ def test_command_cpu_fallback(tmp_path):
 def test_hotkey_parsing():
     assert parse_hotkey("Ctrl+Shift+F9") == (0x0002 | 0x0004, 0x78)
     assert parse_hotkey("alt+r") == (0x0001, ord("R"))
-    for bad in ("F9", "Ctrl+", "Hyper+F9", "Ctrl+Shift+NotAKey"):
+    assert parse_hotkey("F2") == (0, 0x71)  # a function key alone is allowed
+    for bad in ("R", "5", "Ctrl+", "Hyper+F9", "Ctrl+Shift+NotAKey"):
         with pytest.raises(HotkeyError):
             parse_hotkey(bad)
 

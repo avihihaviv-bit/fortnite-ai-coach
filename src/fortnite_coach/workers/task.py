@@ -44,7 +44,10 @@ def run_task(fn: Callable[[], Any], on_done: Callable[[Any], None], on_error: Ca
 
     signals.done.connect(lambda r: _finish(on_done, r))
     signals.failed.connect(lambda e: _finish(on_error, e))
-    QThreadPool.globalInstance().start(_Task(fn, signals))
+    pool = QThreadPool.globalInstance()
+    if pool.maxThreadCount() < 8:  # a slow job (hardware check, clip scan) must never queue a quick one
+        pool.setMaxThreadCount(8)
+    pool.start(_Task(fn, signals))
 
 
 def wait_all(timeout_ms: int = 30000) -> bool:

@@ -29,6 +29,8 @@ class SingleInstance(QObject):
         self.name = name or server_name()
         self._server: QLocalServer | None = None
 
+    last_ack = False  # the running instance answered (False = it is stuck)
+
     def notify_running_instance(self, timeout_ms: int = 500) -> bool:
         """True if another instance is running (and was asked to show itself)."""
         sock = QLocalSocket()
@@ -40,7 +42,7 @@ class SingleInstance(QObject):
         sock.waitForBytesWritten(timeout_ms)
         # Wait for the running instance to acknowledge. On Windows (named pipes) closing right
         # after writing can drop the message before the other process has read it.
-        sock.waitForReadyRead(timeout_ms)
+        self.last_ack = sock.waitForReadyRead(max(timeout_ms, 2000)) and bytes(sock.readAll()).startswith(b"ok")
         sock.disconnectFromServer()
         return True
 

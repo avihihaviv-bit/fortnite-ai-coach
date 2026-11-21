@@ -22,6 +22,16 @@ _NAMED_KEYS = {
 }
 
 
+FUNCTION_KEYS = {f"f{i}" for i in range(1, 25)}
+# Fortnite's default key binds use F1-F4 as alternate build keys (wall, floor, stairs, roof).
+FORTNITE_BUILD_FKEYS = {"f1", "f2", "f3", "f4"}
+
+
+def clashes_with_fortnite(text: str) -> bool:
+    """A lone F1-F4 is taken by the app while it runs, so Fortnite no longer receives it."""
+    return text.strip().lower() in FORTNITE_BUILD_FKEYS
+
+
 class HotkeyError(ValueError):
     pass
 
@@ -30,6 +40,8 @@ def parse_hotkey(text: str) -> tuple[int, int]:
     """'Ctrl+Shift+F9' -> (modifiers, virtual-key code). Requires at least one modifier
     so a hotkey never steals a plain game key."""
     parts = [p.strip().lower() for p in text.split("+") if p.strip()]
+    if len(parts) == 1 and parts[0] in FUNCTION_KEYS:
+        return 0, _NAMED_KEYS[parts[0]]  # e.g. "F2": a function key alone is allowed
     if len(parts) < 2:
         raise HotkeyError("needs a modifier and a key")
     mods, key = 0, parts[-1]

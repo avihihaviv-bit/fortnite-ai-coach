@@ -33,15 +33,15 @@ class HelpPage(BasePage):
     def retranslate(self) -> None:
         super().retranslate()
         hk = ("Ctrl+Shift+F9", "Ctrl+Shift+F10")
-        live_hk = "Ctrl+Shift+F11"
+        live_hk, toggle = "F3", "F2"
         if self.ctx is not None:
             r = self.ctx.settings().recording
             hk = (r.hotkey_start, r.hotkey_stop)
-            live_hk = self.ctx.settings().live.hotkey
+            live_hk, toggle = self.ctx.settings().live.hotkey, r.hotkey_toggle or r.hotkey_start
         rtl = get_translator().is_rtl
         for card, body, key in self.cards:
             card.set_title(tr(f"help.{key}.title"))
-            html = tr(f"help.{key}.body", start=hk[0], stop=hk[1], live=live_hk)
+            html = tr(f"help.{key}.body", start=hk[0], stop=hk[1], live=live_hk, toggle=toggle)
             # one paragraph per line with an explicit base direction, so a line that starts with a
             # Latin word (XP, Gemini) is still laid out right-to-left in Hebrew
             d, a = ("rtl", "right") if rtl else ("ltr", "left")

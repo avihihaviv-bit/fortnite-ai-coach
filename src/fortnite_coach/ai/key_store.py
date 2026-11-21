@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import re
+import sys
 
 import keyring
 from keyring.errors import KeyringError, PasswordDeleteError
@@ -65,6 +66,8 @@ class KeyStore:
             kr = keyring.get_keyring()
         except Exception:  # pragma: no cover
             return False
+        if sys.platform == "win32":
+            return "Windows" in type(kr).__module__ or getattr(kr, "priority", 0) > 0
         return getattr(kr, "priority", 0) > 0 and "fail" not in type(kr).__module__
 
     def save(self, key: str) -> None:
@@ -73,14 +76,15 @@ class KeyStore:
             raise KeyStoreError("apikey.err_no_backend")
         try:
             keyring.set_password(self.service, USERNAME, clean)
-        except KeyringError as e:
+        except Exception as e:  # KeyringError, or a raw Windows error from Credential Manager
             log.error("Could not save API key: %s", type(e).__name__)  # never log the key
             raise KeyStoreError("apikey.err_save") from e
 
     def load(self) -> str | None:
         try:
             return keyring.get_password(self.service, USERNAME)
-        except KeyringError:
+        except Exception as e:  # never let Credential Manager problems stop the app from opening
+            log.warning("Could not read the API key from secure storage: %s", type(e).__name__)
             return None
 
     def has_key(self) -> bool:
@@ -91,5 +95,5 @@ class KeyStore:
             keyring.delete_password(self.service, USERNAME)
         except PasswordDeleteError:
             pass
-        except KeyringError as e:
+        except Exception as e:
             raise KeyStoreError("apikey.err_save") from e

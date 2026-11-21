@@ -19,6 +19,18 @@ def _show_dialog(text: str) -> None:
         pass
 
 
+def show_startup_error(exc: Exception, log_path: str) -> None:
+    from fortnite_coach.logging_setup import redact
+
+    detail = redact(f"{type(exc).__name__}: {exc}")[:400]
+    _show_dialog(
+        "The app could not start.\n\n"
+        f"{detail}\n\n"
+        f"Details: {log_path}\n\n"
+        "האפליקציה לא הצליחה להיפתח. צלם את ההודעה הזו ושלח אותה."
+    )
+
+
 def install_excepthook(log_path: str, show_dialog: bool = True) -> None:
     def hook(exc_type, exc, tb):
         if issubclass(exc_type, KeyboardInterrupt):
@@ -26,10 +38,13 @@ def install_excepthook(log_path: str, show_dialog: bool = True) -> None:
             return
         log.critical("Unhandled exception:\n%s", "".join(traceback.format_exception(exc_type, exc, tb)))
         if show_dialog:
+            from fortnite_coach.logging_setup import redact
+
+            detail = redact(f"{exc_type.__name__}: {exc}")[:300]
             _show_dialog(
-                "An unexpected error occurred. The app may need to restart.\n"
-                f"Details were saved to:\n{log_path}\n\n"
-                "אירעה שגיאה לא צפויה. הפרטים נשמרו בקובץ היומן שלמעלה."
+                "An unexpected error occurred. The app keeps running.\n"
+                f"{detail}\n\nDetails were saved to:\n{log_path}\n\n"
+                "אירעה שגיאה לא צפויה. צלם את ההודעה ושלח אותה."
             )
 
     sys.excepthook = hook

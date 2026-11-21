@@ -35,6 +35,30 @@ def _arg_value(argv: list[str], flag: str) -> str | None:
     return None
 
 
+def _replace_stuck_instance() -> bool:
+    """Ask, then end the other (stuck) copy of the app. True = continue starting."""
+    import os
+    import subprocess
+
+    from PySide6.QtWidgets import QMessageBox
+
+    answer = QMessageBox.question(
+        None, APP_NAME,
+        "Fortnite AI Coach is already running in the background but is not responding.\n"
+        "Close it and start again?\n\n"
+        "האפליקציה כבר פתוחה ברקע אבל לא מגיבה. לסגור אותה ולפתוח מחדש?")
+    if answer != QMessageBox.StandardButton.Yes:
+        return False
+    if sys.platform == "win32" and getattr(sys, "frozen", False):
+        exe = os.path.basename(sys.executable)
+        subprocess.run(["taskkill", "/F", "/IM", exe, "/FI", f"PID ne {os.getpid()}"],
+                       capture_output=True, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        import time
+
+        time.sleep(1.0)
+    return True
+
+
 def run(argv: list[str]) -> int:
     if "--self-test" in argv:
         from fortnite_coach.selftest import main as self_test
@@ -57,8 +81,13 @@ def run(argv: list[str]) -> int:
 
     instance = SingleInstance()
     if instance.notify_running_instance():
-        log.info("Another instance is running; asked it to come to the front")
-        return 0
+        if instance.last_ack:
+            log.info("Another instance is running; asked it to come to the front")
+            return 0
+        # The other copy is running but does not answer (stuck in the background): don't just exit silently.
+        log.warning("Another instance is running but not responding")
+        if not _replace_stuck_instance():
+            return 0
     instance.listen()
 
     from fortnite_coach.db.engine import Database
@@ -67,10 +96,21 @@ def run(argv: list[str]) -> int:
     from fortnite_coach.ui.main_window import MainWindow
 
     log.info("Starting %s %s (frozen=%s)", APP_NAME, __version__, bool(getattr(sys, "frozen", False)))
-    db = Database(paths.database).init()
-    get_or_create_profile(db)
-    seed_builtin(db)
-    window = MainWindow(db, paths)
+    try:
+        db = Database(paths.database).init()
+        get_or_create_profile(db)
+        seed_builtin(db)
+        window = MainWindow(db, paths)
+    except Exception as e:
+        # Never stay running without a window: a hidden process would make every later launch exit silently.
+        import traceback
+
+        from fortnite_coach.crash import show_startup_error
+
+        log.critical("Startup failed:\n%s", traceback.format_exc())
+        instance.close()
+        show_startup_error(e, str(log_file))
+        return 1
     window.quit_on_close = True
     instance.activated.connect(window.bring_to_front)
     window.show()

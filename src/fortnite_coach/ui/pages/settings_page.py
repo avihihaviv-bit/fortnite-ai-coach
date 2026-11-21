@@ -128,7 +128,7 @@ class SettingsPage(BasePage):
         rform = QFormLayout()
         rform.setHorizontalSpacing(16)
         self.rec_labels = {k: QLabel() for k in ("folder", "resolution", "fps", "quality", "encoder", "audio",
-                                                 "hotkey_start", "hotkey_stop")}
+                                                 "hotkey_toggle", "hotkey_start", "hotkey_stop")}
         folder_row = QHBoxLayout()
         self.folder_edit = QLineEdit()
         self.folder_btn = QPushButton()
@@ -148,8 +148,10 @@ class SettingsPage(BasePage):
         self.audio_combo = QComboBox()
         from fortnite_coach.ui.widgets.hotkey_edit import HotkeyEdit
 
+        self.hk_toggle = HotkeyEdit()
         self.hk_start = HotkeyEdit()
         self.hk_stop = HotkeyEdit()
+        self.auto_load = QCheckBox()
         self.hk_enabled = QCheckBox()
         rform.addRow(self.rec_labels["folder"], folder_row)
         rform.addRow(self.rec_labels["resolution"], self.res_combo)
@@ -157,6 +159,8 @@ class SettingsPage(BasePage):
         rform.addRow(self.rec_labels["quality"], self.quality_combo)
         rform.addRow(self.rec_labels["encoder"], self.encoder_combo)
         rform.addRow(self.rec_labels["audio"], self.audio_combo)
+        rform.addRow(self.rec_labels["hotkey_toggle"], self.hk_toggle)
+        rform.addRow("", self.auto_load)
         rform.addRow(self.rec_labels["hotkey_start"], self.hk_start)
         rform.addRow(self.rec_labels["hotkey_stop"], self.hk_stop)
         rform.addRow("", self.hk_enabled)
@@ -281,7 +285,20 @@ class SettingsPage(BasePage):
         self._render_gemini(status)
 
     def set_testing(self, testing: bool) -> None:
+        import time
+
+        from PySide6.QtCore import QTimer
+
         self.testing = testing
+        if testing:
+            self._test_started = time.monotonic()
+            if not hasattr(self, "_test_clock"):
+                self._test_clock = QTimer(self)
+                self._test_clock.setInterval(1000)
+                self._test_clock.timeout.connect(self._render_gemini)
+            self._test_clock.start()
+        elif hasattr(self, "_test_clock"):
+            self._test_clock.stop()
         self._render_gemini()
 
     def _save_gemini(self) -> None:
@@ -331,7 +348,13 @@ class SettingsPage(BasePage):
 
         g = self.ctx.settings().gemini
         lim = self.ctx.settings().limits
-        self.test_btn.setText(tr("apikey.testing") if self.testing else tr("apikey.test"))
+        if self.testing:
+            import time
+
+            secs = int(time.monotonic() - getattr(self, "_test_started", time.monotonic()))
+            self.test_btn.setText(tr("apikey.testing") + (f" {secs}s" if secs >= 3 else ""))
+        else:
+            self.test_btn.setText(tr("apikey.test"))
         self.test_btn.setEnabled(bool(stored) and not self.testing)
         if g.last_test_at:
             res = tr("apikey.test_ok", at=g.last_test_at.replace("T", " ")[:16]) if g.last_test_ok else \
@@ -374,6 +397,8 @@ class SettingsPage(BasePage):
         for combo, value in ((self.res_combo, rec.resolution), (self.fps_combo, rec.fps), (self.quality_combo, rec.quality)):
             i = combo.findData(value)
             combo.setCurrentIndex(max(0, i))
+        self.hk_toggle.setText(rec.hotkey_toggle)
+        self.auto_load.setChecked(rec.auto_load)
         self.hk_start.setText(rec.hotkey_start)
         self.hk_stop.setText(rec.hotkey_stop)
         self.hk_enabled.setChecked(rec.hotkeys_enabled)
@@ -382,15 +407,15 @@ class SettingsPage(BasePage):
         settings = self.ctx.settings()
         rec = settings.recording.model_copy()
         start, stop = self.hk_start.text().strip(), self.hk_stop.text().strip()
+        toggle = self.hk_toggle.text().strip()
         try:
-            if parse_hotkey(start) == parse_hotkey(stop):
-                raise HotkeyError("same")
+            combos = [parse_hotkey(start), parse_hotkey(stop)] + ([parse_hotkey(toggle)] if toggle else [])
             try:
-                live = parse_hotkey(settings.live.hotkey)
+                combos.append(parse_hotkey(settings.live.hotkey))
             except HotkeyError:
-                live = None
-            if live in (parse_hotkey(start), parse_hotkey(stop)):
-                raise HotkeyError("same as live")
+                pass
+            if len(set(combos)) != len(combos):
+                raise HotkeyError("every hotkey must be different")
         except HotkeyError:
             self._rec_msg = ("rec.err_hotkey", {})
             self._render_recording()
@@ -402,6 +427,7 @@ class SettingsPage(BasePage):
         rec.encoder = self.encoder_combo.currentData() or "auto"
         rec.audio_device = self.audio_combo.currentData() or None
         rec.hotkey_start, rec.hotkey_stop = start, stop
+        rec.hotkey_toggle, rec.auto_load = toggle, self.auto_load.isChecked()
         rec.hotkeys_enabled = self.hk_enabled.isChecked()
         settings.recording = rec
         self.ctx.save_settings(settings)
@@ -504,7 +530,8 @@ class SettingsPage(BasePage):
         self.clear_cache_btn.setText(tr("settings.clear_cache"))
         self.delete_all_btn.setText(tr("settings.delete_all"))
         self.clear_cache_btn.setToolTip(tr("settings.clear_cache_tip"))
-        for hk in (self.hk_start, self.hk_stop):
+        self.auto_load.setText(tr("rec.auto_load"))
+        for hk in (self.hk_toggle, self.hk_start, self.hk_stop):
             hk.setPlaceholderText(tr("rec.hotkey_hint"))
             hk.setToolTip(tr("rec.hotkey_hint"))
         self.delete_all_btn.setToolTip(tr("settings.delete_all_tip"))

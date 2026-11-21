@@ -19,11 +19,32 @@ def load_settings(db: Database) -> AppSettings:
         row = s.get(Setting, KEY)
         if row is None:
             return AppSettings()
-        try:
-            return AppSettings.model_validate(row.value)
-        except ValidationError:
-            log.warning("Stored settings were invalid; using defaults")
-            return AppSettings()
+        return _upgrade(_validate(row.value))
+
+
+def _validate(data: dict) -> AppSettings:
+    try:
+        return AppSettings.model_validate(data)
+    except ValidationError:
+        # keep every section that is still valid instead of losing all settings
+        log.warning("Some stored settings were invalid; keeping the valid parts")
+        kept = {}
+        for key, value in (data or {}).items():
+            try:
+                AppSettings.model_validate({key: value})
+                kept[key] = value
+            except ValidationError:
+                continue
+        return AppSettings.model_validate(kept)
+
+
+def _upgrade(s: AppSettings) -> AppSettings:
+    if s.settings_version < 2:
+        # 1.6: Live on/off moved from Ctrl+Shift+F11 to F3 (unless the player had chosen another key)
+        if s.live.hotkey == "Ctrl+Shift+F11":
+            s.live.hotkey = "F3"
+        s.settings_version = 2
+    return s
 
 
 def save_settings(db: Database, settings: AppSettings) -> None:

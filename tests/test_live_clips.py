@@ -64,7 +64,8 @@ def test_hotkey_box_records_combination(qtbot):
 
     create_app([])
     assert combo_text(Qt.Key.Key_F9, Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier) == "Ctrl+Shift+F9"
-    assert combo_text(Qt.Key.Key_F9, Qt.KeyboardModifier.NoModifier) is None  # never a plain game key
+    assert combo_text(Qt.Key.Key_F2, Qt.KeyboardModifier.NoModifier) == "F2"  # a function key alone is allowed
+    assert combo_text(Qt.Key.Key_R, Qt.KeyboardModifier.NoModifier) is None  # never a plain letter (game key)
     assert combo_text(Qt.Key.Key_Control, Qt.KeyboardModifier.ControlModifier) is None
     box = HotkeyEdit()
     qtbot.addWidget(box)
@@ -238,7 +239,8 @@ def test_record_card_renders_with_windows_hotkeys(win, monkeypatch):
     page = w.pages["gameplay"]
     page.start_mode.setCurrentIndex(page.start_mode.findData("record_live"))
     page._render_recording()
-    assert "Ctrl+Shift+F11" in page.rec_info.text()
+    assert "F3" in page.rec_info.text() and "F2" in page.rec_info.text()
+    assert "alternate build keys" in page.rec_info.text()  # honest warning about F1-F4
 
 
 # ---------------------------------------------------------------- what to search
@@ -369,3 +371,52 @@ def test_live_model_auto_prefers_lite_and_falls_back(win):
     assert "separately" in w.settings_page.live_card.feedback.text() or "per model" in w.settings_page.live_card.feedback.text()
     w.live._failed(FakeAPIError(429, "RESOURCE_EXHAUSTED limit: 0 TEST DATA"), w.live.model)
     assert w.live.active and w.live.model == w.settings.gemini.model  # switched instead of stopping
+
+
+def test_f2_toggles_recording_and_loads_the_video(win):
+    w, client, qtbot = win
+    assert w.settings.recording.hotkey_toggle == "F2" and w.settings.live.hotkey == "F3"
+    w.toggle_recording()
+    assert w.recording.is_recording and "Recording started" in w.overlay.text
+    qtbot.wait(2500)
+    w.toggle_recording()
+    assert not w.recording.is_recording
+    page = w.pages["gameplay"]
+    qtbot.waitUntil(lambda: page.current is not None, timeout=30000)  # loaded automatically, ready to analyze
+    assert "loading it for analysis" in w.overlay.text or page.current is not None
+
+
+def test_f3_toggles_live(win):
+    w, client, qtbot = win
+    connect(w, qtbot)
+    _enable_live(w)
+    w.toggle_live()
+    assert w.live.active and "Live Coach on" in w.overlay.text
+    w.toggle_live()
+    assert not w.live.active and "Live Coach off" in w.overlay.text
+
+
+def test_old_settings_upgrade_live_key_and_keep_valid_parts(tmp_path):
+    from fortnite_coach.db.models import Setting
+    from fortnite_coach.db.repositories import settings_repo
+
+    db = Database(tmp_path / "s.db").init()
+    with db.session() as s:
+        s.add(Setting(key=settings_repo.KEY, value={
+            "language": "en", "live": {"hotkey": "Ctrl+Shift+F11", "acknowledged": True},
+            "recording": {"fps": 9999}}))  # an invalid section must not reset everything
+    st = settings_repo.load_settings(db)
+    assert st.live.hotkey == "F3" and st.live.acknowledged and st.language.value == "en"
+    assert st.recording.fps == 60  # invalid section replaced by defaults only
+    db.close()
+
+
+def test_recording_settings_reject_duplicate_hotkeys(win):
+    w, client, qtbot = win
+    sp = w.settings_page
+    sp.hk_toggle.setText("F3")  # same as Live
+    sp._save_recording()
+    assert w.settings.recording.hotkey_toggle == "F2"
+    sp.hk_toggle.setText("F6")
+    sp._save_recording()
+    assert w.settings.recording.hotkey_toggle == "F6"

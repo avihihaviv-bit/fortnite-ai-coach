@@ -41,7 +41,8 @@ def test_migrations_idempotent_and_incremental(tmp_path):
 
 def test_settings_round_trip_and_persist_across_reopen(tmp_path):
     db = make_db(tmp_path)
-    assert settings_repo.load_settings(db) == AppSettings()
+    loaded = settings_repo.load_settings(db)
+    assert loaded.model_copy(update={"settings_version": 1}) == AppSettings()  # invalid value -> defaults
     s = AppSettings(language=Language.ENGLISH)
     s.limits.max_requests_per_day = 5
     settings_repo.save_settings(db, s)
@@ -55,7 +56,8 @@ def test_invalid_stored_settings_fall_back_to_defaults(tmp_path):
     db = make_db(tmp_path)
     with db.session() as s:
         s.add(Setting(key=settings_repo.KEY, value={"language": "klingon"}))
-    assert settings_repo.load_settings(db) == AppSettings()
+    loaded = settings_repo.load_settings(db)
+    assert loaded.model_copy(update={"settings_version": 1}) == AppSettings()  # invalid value -> defaults
 
 
 def test_profile_single_row(tmp_path):

@@ -55,6 +55,8 @@ class RecordingSettings(BaseModel):
     audio_device: str | None = None        # DirectShow device name; None = video only
     monitor_index: int = Field(default=0, ge=0, le=8)
     start_mode: str = Field(default="record", pattern="^(record|record_live|live)$")
+    hotkey_toggle: str = "F2"              # one key: start / stop a regular recording
+    auto_load: bool = True                 # after stopping, load the video into Gameplay Analysis automatically
     hotkey_start: str = "Ctrl+Shift+F9"
     hotkey_stop: str = "Ctrl+Shift+F10"
     hotkeys_enabled: bool = True
@@ -68,7 +70,7 @@ class LiveSettings(BaseModel):
     frames: int = Field(default=5, ge=2, le=10)          # screenshots per request (one every 2 s)
     max_tips_per_day: int = Field(default=40, ge=1, le=500)
     show_seconds: int = Field(default=12, ge=4, le=60)
-    hotkey: str = "Ctrl+Shift+F11"
+    hotkey: str = "F3"
     model: str = ""                        # "" = automatic (a flash-lite model: separate free quota)
 
 
@@ -77,6 +79,7 @@ class VideoSettings(BaseModel):
 
 
 class AppSettings(BaseModel):
+    settings_version: int = 1  # missing in old saved settings -> upgraded on load
     language: Language = Language.HEBREW
     ffmpeg_path: str | None = None
     ffprobe_path: str | None = None

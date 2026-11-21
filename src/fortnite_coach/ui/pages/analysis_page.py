@@ -389,9 +389,16 @@ class AnalysisPage(BasePage):
             if live.last_error and not live_on:
                 lines.insert(0, "⚠  " + tr("live.stopped", reason=tr(live.last_error)))
         if hotkeys_supported() and rec.hotkeys_enabled:
-            lines.append(tr("rec.hotkeys", start=rec.hotkey_start, stop=rec.hotkey_stop))
+            from fortnite_coach.recording.hotkeys import clashes_with_fortnite
+
+            if rec.hotkey_toggle:
+                lines.append(tr("rec.toggle_line", combo=rec.hotkey_toggle))
             if live is not None:
                 lines.append(tr("live.hotkey_line", combo=settings.live.hotkey))
+            lines.append(tr("rec.hotkeys", start=rec.hotkey_start, stop=rec.hotkey_stop))
+            fkeys = [k for k in (rec.hotkey_toggle, settings.live.hotkey) if k and clashes_with_fortnite(k)]
+            if fkeys:
+                lines.append("⚠  " + tr("rec.fkey_warning", keys=", ".join(fkeys)))
             if rc.hotkey_errors:
                 lines.append("⚠  " + tr("rec.hotkey_taken", keys=", ".join(rc.hotkey_errors)))
         elif not hotkeys_supported():

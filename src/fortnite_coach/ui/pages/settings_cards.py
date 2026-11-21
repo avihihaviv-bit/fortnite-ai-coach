@@ -117,7 +117,10 @@ class LiveCard(Card):
         key = self.hotkey.text().strip()
         try:
             combo = parse_hotkey(key)
-            if combo in (parse_hotkey(s.recording.hotkey_start), parse_hotkey(s.recording.hotkey_stop)):
+            taken = [parse_hotkey(s.recording.hotkey_start), parse_hotkey(s.recording.hotkey_stop)]
+            if s.recording.hotkey_toggle:
+                taken.append(parse_hotkey(s.recording.hotkey_toggle))
+            if combo in taken:
                 raise HotkeyError("same")
         except HotkeyError:
             self._msg = "⚠  " + tr("live.err_hotkey")
