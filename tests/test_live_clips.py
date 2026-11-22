@@ -420,3 +420,30 @@ def test_recording_settings_reject_duplicate_hotkeys(win):
     sp.hk_toggle.setText("F6")
     sp._save_recording()
     assert w.settings.recording.hotkey_toggle == "F6"
+
+
+def test_f2_with_auto_analyze_produces_a_report(win):
+    from fortnite_coach.db.repositories import report_repo
+
+    w, client, qtbot = win
+    client._responses = [segment_json("00:01")]
+    connect(w, qtbot)
+    w.settings.recording.auto_analyze = True
+    w.toggle_recording()
+    qtbot.wait(3000)
+    w.toggle_recording()
+    assert "analyzing it now" in w.overlay.text
+    qtbot.waitUntil(lambda: bool(report_repo.list_reports(w.db)), timeout=60000)  # no dialog was needed
+    qtbot.waitUntil(lambda: w.current_key == "history", timeout=10000)  # the report opens by itself
+
+
+def test_auto_analyze_without_key_only_loads(win):
+    w, client, qtbot = win
+    w.settings.recording.auto_analyze = True
+    blocked = []
+    w.pages["gameplay"].auto_analyze_blocked.connect(blocked.append)
+    w.toggle_recording()
+    qtbot.wait(2500)
+    w.toggle_recording()
+    qtbot.waitUntil(lambda: bool(blocked), timeout=30000)
+    assert blocked == ["analysis.need_key"] and w.pages["gameplay"].current is not None

@@ -203,3 +203,31 @@ def test_recorder_reports_ffmpeg_failure(tmp_path, monkeypatch):
     rec.start(broken)
     _wait(lambda: rec.poll() is RecorderState.FAILED, timeout=20)
     assert rec.state is RecorderState.FAILED and rec.error and rec.parts == []
+
+
+def test_start_before_hardware_check_runs_the_check_first(qtbot, tmp_path, monkeypatch):
+    """F2 right after installing: the one-time hardware check runs, then recording starts by itself."""
+    from fortnite_coach.app import create_app
+    from fortnite_coach.config.settings import AppSettings
+    from fortnite_coach.recording import controller as ctl
+    from fortnite_coach.recording.capabilities import Capabilities
+
+    create_app([])
+    rc = ctl.RecordingController(tmp_path, lambda: AppSettings())
+    started = []
+    monkeypatch.setattr(ctl.capabilities, "detect", lambda ffmpeg: "CAPS")
+    monkeypatch.setattr(ctl, "find_ffmpeg", lambda p=None: "ffmpeg")
+    orig_start = rc.start
+
+    def fake_start():
+        if rc.caps is not None:
+            started.append(rc.caps)
+            return True
+        return orig_start()
+
+    monkeypatch.setattr(rc, "start", fake_start)
+    waiting = []
+    rc.waiting_for_hardware.connect(lambda: waiting.append(1))
+    assert orig_start() is False and waiting and rc.start_after_detect
+    qtbot.waitUntil(lambda: bool(started), timeout=10000)
+    assert started == ["CAPS"] and not rc.start_after_detect

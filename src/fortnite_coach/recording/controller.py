@@ -23,6 +23,7 @@ class RecordingController(QObject):
     interrupted = Signal(int)            # capture was cut off and resumed automatically (restart count)
     failed = Signal(str)                 # i18n key or error text
     capabilities_ready = Signal(object)  # Capabilities | None
+    waiting_for_hardware = Signal()      # start requested; the one-time hardware check runs first
 
     def __init__(self, log_dir: Path, settings_provider, *, source_override: str | None = None):
         super().__init__()
@@ -35,6 +36,7 @@ class RecordingController(QObject):
         self._source_override = source_override  # "test" in automated tests only
         self.test_part_seconds: float | None = None  # tests only: make each synthetic part end by itself
         self._seen_restarts = 0
+        self.start_after_detect = False  # a start was requested before the hardware check finished
         self._timer = QTimer(self)
         self._timer.setInterval(500)
         self._timer.timeout.connect(self._on_tick)
@@ -54,9 +56,15 @@ class RecordingController(QObject):
     def _caps_done(self, caps: Capabilities) -> None:
         self.detecting, self.caps, self.caps_error = False, caps, None
         self.capabilities_ready.emit(caps)
+        if self.start_after_detect:
+            self.start_after_detect = False
+            self.start()
 
     def _caps_failed(self, err: Exception) -> None:
         self.detecting, self.caps = False, None
+        if self.start_after_detect:
+            self.start_after_detect = False
+            self.failed.emit(getattr(err, "i18n_key", "rec.err_unavailable"))
         self.caps_error = getattr(err, "i18n_key", "error.generic")
         self.capabilities_ready.emit(None)
 
@@ -77,6 +85,12 @@ class RecordingController(QObject):
             return True
         app_settings = self._settings()
         rec = app_settings.recording
+        if self.caps is None and self._source_override is None:
+            # first use (e.g. F2 right after installing): check the hardware, then start by itself
+            self.start_after_detect = True
+            self.detect()
+            self.waiting_for_hardware.emit()
+            return False
         source = self._source_override or (self.caps.capture_backend if self.caps else None)
         encoder = "libx264" if self._source_override == "test" else self.chosen_encoder(rec)
         if source is None or encoder is None:

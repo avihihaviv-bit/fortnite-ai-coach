@@ -57,6 +57,7 @@ def fmt_duration(seconds: float) -> str:
 
 class AnalysisPage(BasePage):
     video_imported = Signal()
+    auto_analyze_blocked = Signal(str)  # i18n key: why the automatic analysis could not start
     analysis_finished = Signal(str)  # message for the tray when the app is in the background
 
     def __init__(self, ctx: AppContext, *, training: bool, parent: QWidget | None = None):
@@ -433,6 +434,8 @@ class AnalysisPage(BasePage):
         ffprobe = self.ctx.settings().ffprobe_path
         run_task(lambda: import_video(path, frames_root, ffprobe), self._import_done, self._import_failed)
 
+    auto_analyze_next = False  # set when a finished recording should be analyzed as soon as it is loaded
+
     def _import_done(self, video: ImportedVideo) -> None:
         self.loading, self.current = False, video
         m = video.meta
@@ -442,6 +445,13 @@ class AnalysisPage(BasePage):
         self.refresh_recent()
         self.retranslate()
         self.video_imported.emit()
+        if self.auto_analyze_next:
+            self.auto_analyze_next = False
+            reason = self.analyze_block_reason()
+            if reason is None:
+                self.start_analysis(auto=True)
+            else:
+                self.auto_analyze_blocked.emit(reason)
 
     def _import_failed(self, err: Exception) -> None:
         self.loading = False
@@ -515,7 +525,8 @@ class AnalysisPage(BasePage):
             v = s.scalars(select(Video).where(Video.fingerprint == self.current.fingerprint)).first()
             return v.id if v else None
 
-    def start_analysis(self) -> None:
+    def start_analysis(self, auto: bool = False) -> None:
+        """auto: started by "analyze automatically after recording" (the player opted in; no dialogs)."""
         from fortnite_coach.ai import usage_tracker
         from fortnite_coach.coaching import pipeline
         from fortnite_coach.i18n.translator import get_translator
@@ -525,7 +536,7 @@ class AnalysisPage(BasePage):
             return
         self.job_error = None
         self.job_detail = ""
-        if process_guard.is_fortnite_running():  # one check, on click only
+        if not auto and process_guard.is_fortnite_running():  # one check, on click only
             # Not blocked: the player decides. The video preparation runs at low priority and the rest is
             # network time, but it still uses some CPU while the game runs.
             if not self.confirm(tr("analysis.fortnite_running_title"), tr("analysis.fortnite_running_confirm")):
@@ -542,7 +553,7 @@ class AnalysisPage(BasePage):
         text = tr("analysis.confirm_text", model=settings.gemini.model, requests=plan.to_send, cached=plan.cached,
                   minutes=fmt_duration(covered), mb=f"{est_mb:.0f}" if plan.proxy_needed else "0",
                   used=usage_tracker.requests_today(self.ctx.db), limit=settings.limits.max_requests_per_day)
-        if not self.confirm(tr("analysis.confirm_title"), text):
+        if not auto and not self.confirm(tr("analysis.confirm_title"), text):
             return
         self.job = AnalysisJob(self.ctx.db, self.ctx.paths, settings, self.ctx.gemini_service(), req)
         self.job.progress.connect(self._on_progress)
@@ -596,9 +607,9 @@ class AnalysisPage(BasePage):
             self._limit_params = err.params
         else:
             self.job_error = getattr(err, "i18n_key", "error.generic")
-            from fortnite_coach.logging_setup import redact
+            from fortnite_coach.logging_setup import google_message
 
-            self.job_detail = redact(str(err))[:400]
+            self.job_detail = google_message(str(err))[:400]
             if self.job_error == "gemini.err_model":  # the tested model stopped working: ask for a new test
                 st = self.ctx.settings()
                 g = st.gemini.model_copy()

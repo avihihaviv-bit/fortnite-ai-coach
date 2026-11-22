@@ -27,6 +27,14 @@ def redact(text: str) -> str:
     return text
 
 
+def google_message(text: str) -> str:
+    """Google's errors are long JSON dumps; keep the human sentence ('API key not valid...') when there is one."""
+    import re
+
+    m = re.search(r"""['"]message['"]\s*:\s*['"]([^'"]{3,300})['"]""", text or "")
+    return redact(m.group(1) if m else (text or ""))
+
+
 class RedactingFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         return redact(super().format(record))

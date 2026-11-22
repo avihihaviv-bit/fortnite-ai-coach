@@ -38,7 +38,9 @@ def test_connection(service: GeminiService, *, may_pick: bool = False) -> Connec
     except GeminiNotConfiguredError:
         return ConnectionTestResult(False, error_key="gemini.not_configured", tested_at=now)
     except GeminiError as e:
-        return ConnectionTestResult(False, error_key=e.i18n_key, tested_at=now)
+        from fortnite_coach.logging_setup import google_message
+
+        return ConnectionTestResult(False, error_key=e.i18n_key, tested_at=now, detail=google_message(str(e))[:400])
     usable = usable_models(names)
     if not usable:
         return ConnectionTestResult(False, error_key="gemini.err_no_free_model", tested_at=now)
@@ -51,7 +53,7 @@ def test_connection(service: GeminiService, *, may_pick: bool = False) -> Connec
         candidates = [service.model] if service.model in usable else []
         if not candidates:
             return ConnectionTestResult(False, usable, "gemini.err_model", now)
-    from fortnite_coach.logging_setup import redact
+    from fortnite_coach.logging_setup import google_message
 
     detail = ""
     for model in candidates:
@@ -60,7 +62,7 @@ def test_connection(service: GeminiService, *, may_pick: bool = False) -> Connec
         try:
             service.ping(model, timeout_s=REQUEST_TIMEOUT_S)
         except GeminiError as e:
-            detail = redact(str(e))[:400]
+            detail = google_message(str(e))[:400]
             if e.i18n_key == "gemini.err_rate_limit":
                 # "too many requests per minute": the key and the model work, Google only asks to slow down
                 picked = model if model != service.model else None

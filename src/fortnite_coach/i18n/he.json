@@ -629,5 +629,9 @@
   "rec.flash_saved_loading": "■ ההקלטה נשמרה, טוען אותה לניתוח…",
   "rec.flash_failed": "ההקלטה לא התחילה: {reason}",
   "live.flash_on": "◆ מאמן לייב פועל",
-  "live.flash_off": "◇ מאמן לייב כבוי"
+  "live.flash_off": "◇ מאמן לייב כבוי",
+  "rec.auto_analyze": "…ולנתח אותו מיד עם Gemini (בלי אישור; בדרך כלל 1–3 בקשות; הדוח נפתח כשמוכן)",
+  "rec.flash_saved_analyzing": "■ ההקלטה נשמרה, מנתח אותה עכשיו…",
+  "rec.auto_analyze_blocked": "ההקלטה נטענה אבל לא נותחה: {reason}",
+  "rec.flash_checking": "בודק את חומרת ההקלטה במחשב (רק בפעם הראשונה), ההקלטה תתחיל בעוד כמה שניות…"
 }

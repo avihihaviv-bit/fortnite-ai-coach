@@ -112,6 +112,9 @@ class MainWindow(QMainWindow):
         self.recording.capabilities_ready.connect(self._on_capabilities)
         self.recording.finished.connect(self._on_recording_finished)
         self.recording.failed.connect(self._on_recording_failed_flash)
+        self.recording.waiting_for_hardware.connect(lambda: self._flash(tr("rec.flash_checking")))
+        self.recording.state_changed.connect(
+            lambda st: self._flash(tr("rec.flash_started")) if st == "recording" else None)
         self.recording.state_changed.connect(lambda _s: self._on_session_changed())
         self.recording.tick.connect(lambda _t: self._render_recording_indicator())
         self._safe("hotkeys", self.register_hotkeys)
@@ -125,6 +128,8 @@ class MainWindow(QMainWindow):
         self.quit_on_close = False
         for key in ("gameplay", "training_sessions"):
             self.pages[key].analysis_finished.connect(self._notify_if_background)
+        self.pages["gameplay"].auto_analyze_blocked.connect(
+            lambda key: self.tray.notify(tr("rec.auto_analyze_blocked", reason=tr(key))))
         get_translator().on_change(self._on_language_changed)
         get_translator().set_language(self.settings.language.value)
 
@@ -272,8 +277,8 @@ class MainWindow(QMainWindow):
         """One key (default F2): start or stop a regular recording, whatever mode the record card shows."""
         if self.recording.is_recording:
             self.recording.stop()
-        elif self.recording.start():
-            self._flash(tr("rec.flash_started"))
+        else:
+            self.recording.start()
 
     def toggle_live(self) -> None:
         """One key (default F3): Live Coach on/off."""
@@ -292,7 +297,9 @@ class MainWindow(QMainWindow):
         if not self.settings.recording.auto_load:
             self._flash(tr("rec.flash_saved"))
             return
-        self._flash(tr("rec.flash_saved_loading"))
+        auto = self.settings.recording.auto_analyze
+        self._flash(tr("rec.flash_saved_analyzing" if auto else "rec.flash_saved_loading"))
+        self.pages["gameplay"].auto_analyze_next = auto
         from PySide6.QtCore import QTimer
 
         # after the page stored the parts: join them and load the video, ready to analyze

@@ -57,6 +57,7 @@ class RecordingSettings(BaseModel):
     start_mode: str = Field(default="record", pattern="^(record|record_live|live)$")
     hotkey_toggle: str = "F2"              # one key: start / stop a regular recording
     auto_load: bool = True                 # after stopping, load the video into Gameplay Analysis automatically
+    auto_analyze: bool = False             # opt-in: also analyze it right away (no confirmation; uses requests)
     hotkey_start: str = "Ctrl+Shift+F9"
     hotkey_stop: str = "Ctrl+Shift+F10"
     hotkeys_enabled: bool = True
