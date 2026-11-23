@@ -76,6 +76,18 @@ jobs:
           $p = Start-Process $exe -ArgumentList "--self-test","--out","$PWD\dist\installed-selftest.json" -Wait -PassThru
           Get-Content dist\installed-selftest.json
           if ($p.ExitCode -ne 0) { throw "Installed self-test failed" }
+          # in-app update path: run the same installer again silently with /RELAUNCH=1 -> the app must start by itself
+          Get-Process FortniteAICoach -ErrorAction SilentlyContinue | Stop-Process -Force
+          Start-Process $setup -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/CURRENTUSER","/RELAUNCH=1" -Wait
+          $started = $false
+          for ($i = 0; $i -lt 30; $i++) {
+            if (Get-Process FortniteAICoach -ErrorAction SilentlyContinue) { $started = $true; break }
+            Start-Sleep -Seconds 1
+          }
+          if (-not $started) { throw "The app did not start again after an in-app style update (/RELAUNCH=1)" }
+          Write-Host "Upgrade with /RELAUNCH=1 restarted the app"
+          Get-Process FortniteAICoach -ErrorAction SilentlyContinue | Stop-Process -Force
+          Start-Sleep -Seconds 2
           $uninst = "$env:LOCALAPPDATA\Programs\Fortnite AI Coach\unins000.exe"
           Start-Process $uninst -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" -Wait
           Start-Sleep -Seconds 3

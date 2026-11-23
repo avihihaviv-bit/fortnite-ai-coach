@@ -33,8 +33,8 @@ class TipOverlay(QWidget):
         self._hide_timer.timeout.connect(self.hide)
         self.monitor_index = 0
 
-    def show_tip(self, text: str, seconds: int = 12) -> None:
-        self.label.setText("🎯  " + text)
+    def show_tip(self, text: str, seconds: int = 12, icon: str = "🎯") -> None:
+        self.label.setText(f"{icon}  {text}" if icon else text)
         self.label.adjustSize()
         self.adjustSize()
         screens = QGuiApplication.screens()

@@ -86,6 +86,7 @@ class AppSettings(BaseModel):
     ffprobe_path: str | None = None
     confirm_before_each_request: bool = True
     hardware_checked: bool = False  # onboarding: the user ran "Check hardware" successfully at least once
+    focus_reminder: bool = True  # when recording / Live starts: show your #1 thing to work on (from past reports)
     check_updates: bool = True  # look for a newer version once at startup (only tells you; never installs by itself)
     close_to_tray: bool = True  # keep running in the tray so recording hotkeys keep working
     gemini: GeminiSettings = Field(default_factory=GeminiSettings)

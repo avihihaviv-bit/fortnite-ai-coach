@@ -114,7 +114,7 @@ class MainWindow(QMainWindow):
         self.recording.failed.connect(self._on_recording_failed_flash)
         self.recording.waiting_for_hardware.connect(lambda: self._flash(tr("rec.flash_checking")))
         self.recording.state_changed.connect(
-            lambda st: self._flash(tr("rec.flash_started")) if st == "recording" else None)
+            lambda st: self._session_started(tr("rec.flash_started")) if st == "recording" else None)
         self.recording.state_changed.connect(lambda _s: self._on_session_changed())
         self.recording.tick.connect(lambda _t: self._render_recording_indicator())
         self._safe("hotkeys", self.register_hotkeys)
@@ -139,10 +139,11 @@ class MainWindow(QMainWindow):
         self.navigate("dashboard")
         from fortnite_coach import updater
 
+        self._safe("update cleanup", lambda: updater.cleanup(self.paths.cache_dir / "updates"))
         if self.settings.check_updates and updater.can_self_update():
             from PySide6.QtCore import QTimer
 
-            QTimer.singleShot(8000, lambda: self.settings_page.update_card.check(
+            QTimer.singleShot(8000, self, lambda: self.settings_page.update_card.check(
                 on_found=lambda info: self.tray.notify(tr("update.found_tray", version=info.version))))
         if self.settings.hardware_checked and recording_source is None:
             # A few short ffmpeg checks in the background, so the start hotkey works right away from the tray.
@@ -208,7 +209,7 @@ class MainWindow(QMainWindow):
 
         from PySide6.QtCore import QTimer
 
-        QTimer.singleShot(self.TEST_GIVE_UP_MS, give_up)
+        QTimer.singleShot(self.TEST_GIVE_UP_MS, self, give_up)
 
         def done(result):
             if gen != self._test_gen:
@@ -293,12 +294,37 @@ class MainWindow(QMainWindow):
             self.live.stop()
             self._flash(tr("live.flash_off"))
         elif self.live.start():
-            self._flash(tr("live.flash_on"))
+            self._session_started(tr("live.flash_on"))
+
+    def focus_text(self) -> str | None:
+        """Your #1 thing to work on, from what the coach saw in your past videos (no request is sent)."""
+        from fortnite_coach.db.repositories import report_repo
+        from fortnite_coach.ui.pages.history_page import code_label
+
+        top = report_repo.struggles(self.db, 1)
+        if not top:
+            return None
+        g = top[0]
+        name = code_label(g.code, False) if g.code != "OTHER" else g.example[:70]
+        return tr("focus.reminder", name=name)
+
+    def _session_started(self, confirmation: str) -> None:
+        self._flash(confirmation)
+        if not self.settings.focus_reminder:
+            return
+        try:
+            text = self.focus_text()
+        except Exception:
+            text = None
+        if text:
+            from PySide6.QtCore import QTimer
+
+            QTimer.singleShot(3200, self.overlay, lambda: self.overlay.show_tip(text, 7))  # cancelled if closed
 
     def _flash(self, text: str) -> None:
         """Short confirmation in the top-left corner, visible in-game (hotkeys give no other feedback there)."""
         self.overlay.monitor_index = self.settings.recording.monitor_index
-        self.overlay.show_tip(text, 3)
+        self.overlay.show_tip(text, 3, icon="")
 
     def _on_recording_finished(self, parts) -> None:
         if not self.settings.recording.auto_load:
@@ -310,7 +336,7 @@ class MainWindow(QMainWindow):
         from PySide6.QtCore import QTimer
 
         # after the page stored the parts: join them and load the video, ready to analyze
-        QTimer.singleShot(0, self.pages["gameplay"].load_last_recording)
+        QTimer.singleShot(0, self, self.pages["gameplay"].load_last_recording)
 
     def _on_recording_failed_flash(self, msg: str) -> None:
         reason = tr(msg) if "." in msg and " " not in msg else msg[-120:]

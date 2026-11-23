@@ -100,6 +100,7 @@ def download(info: UpdateInfo, folder: Path, progress=lambda done, total: None,
     if not re.fullmatch(r"[0-9a-f]{64}", expected):
         raise UpdateError("update.err_no_checksum")
     folder.mkdir(parents=True, exist_ok=True)
+    cleanup(folder)  # never keep old 200 MB installers around
     out = folder / f"FortniteAICoach-Setup-{info.version}.exe"
     part = out.with_suffix(".part")
     h = hashlib.sha256()
@@ -129,6 +130,20 @@ def download(info: UpdateInfo, folder: Path, progress=lambda done, total: None,
         raise UpdateError("update.err_checksum")
     part.replace(out)
     return out
+
+
+def cleanup(folder: Path) -> int:
+    """Delete downloaded installers (after an update finished they are not needed). Returns bytes freed."""
+    freed = 0
+    if folder.is_dir():
+        for p in folder.iterdir():
+            try:
+                size = p.stat().st_size
+                p.unlink()
+                freed += size
+            except OSError:
+                pass  # still in use (the installer is finishing): next start removes it
+    return freed
 
 
 def can_self_update() -> bool:

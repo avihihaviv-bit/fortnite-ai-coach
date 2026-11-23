@@ -153,6 +153,7 @@ class SettingsPage(BasePage):
         self.hk_stop = HotkeyEdit()
         self.auto_load = QCheckBox()
         self.auto_analyze = QCheckBox()
+        self.focus_reminder = QCheckBox()
         self.hk_enabled = QCheckBox()
         rform.addRow(self.rec_labels["folder"], folder_row)
         rform.addRow(self.rec_labels["resolution"], self.res_combo)
@@ -163,6 +164,7 @@ class SettingsPage(BasePage):
         rform.addRow(self.rec_labels["hotkey_toggle"], self.hk_toggle)
         rform.addRow("", self.auto_load)
         rform.addRow("", self.auto_analyze)
+        rform.addRow("", self.focus_reminder)
         rform.addRow(self.rec_labels["hotkey_start"], self.hk_start)
         rform.addRow(self.rec_labels["hotkey_stop"], self.hk_stop)
         rform.addRow("", self.hk_enabled)
@@ -403,6 +405,7 @@ class SettingsPage(BasePage):
         self.hk_toggle.setText(rec.hotkey_toggle)
         self.auto_load.setChecked(rec.auto_load)
         self.auto_analyze.setChecked(rec.auto_analyze)
+        self.focus_reminder.setChecked(self.ctx.settings().focus_reminder)
         self.hk_start.setText(rec.hotkey_start)
         self.hk_stop.setText(rec.hotkey_stop)
         self.hk_enabled.setChecked(rec.hotkeys_enabled)
@@ -433,6 +436,7 @@ class SettingsPage(BasePage):
         rec.hotkey_start, rec.hotkey_stop = start, stop
         rec.hotkey_toggle, rec.auto_load = toggle, self.auto_load.isChecked()
         rec.auto_analyze = self.auto_analyze.isChecked() and rec.auto_load
+        settings.focus_reminder = self.focus_reminder.isChecked()
         rec.hotkeys_enabled = self.hk_enabled.isChecked()
         settings.recording = rec
         self.ctx.save_settings(settings)
@@ -537,6 +541,7 @@ class SettingsPage(BasePage):
         self.clear_cache_btn.setToolTip(tr("settings.clear_cache_tip"))
         self.auto_load.setText(tr("rec.auto_load"))
         self.auto_analyze.setText(tr("rec.auto_analyze"))
+        self.focus_reminder.setText(tr("focus.setting"))
         for hk in (self.hk_toggle, self.hk_start, self.hk_stop):
             hk.setPlaceholderText(tr("rec.hotkey_hint"))
             hk.setToolTip(tr("rec.hotkey_hint"))

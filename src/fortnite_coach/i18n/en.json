@@ -658,5 +658,7 @@
   "update.busy_recording": "Stop recording / Live Coach first, then install the update.",
   "update.busy_analysis": "An analysis is running. Install the update when it is done.",
   "update.cancelled": "Cancelled.",
-  "update.found_tray": "Fortnite AI Coach {version} is available. Settings → Updates → Install."
+  "update.found_tray": "Fortnite AI Coach {version} is available. Settings → Updates → Install.",
+  "focus.reminder": "Today's focus: {name}",
+  "focus.setting": "When recording / Live starts, remind me of my #1 thing to work on (from past reports)"
 }

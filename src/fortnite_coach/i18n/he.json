@@ -658,5 +658,7 @@
   "update.busy_recording": "עצור קודם את ההקלטה / מאמן הלייב, ואז התקן את העדכון.",
   "update.busy_analysis": "ניתוח רץ עכשיו. התקן את העדכון כשהוא יסתיים.",
   "update.cancelled": "בוטל.",
-  "update.found_tray": "גרסה {version} של Fortnite AI Coach זמינה. הגדרות ← עדכונים ← התקן."
+  "update.found_tray": "גרסה {version} של Fortnite AI Coach זמינה. הגדרות ← עדכונים ← התקן.",
+  "focus.reminder": "הפוקוס להיום: {name}",
+  "focus.setting": "כשהקלטה / לייב מתחילים, להזכיר לי את הדבר מספר 1 לשפר (מהדוחות הקודמים)"
 }

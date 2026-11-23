@@ -447,3 +447,28 @@ def test_auto_analyze_without_key_only_loads(win):
     w.toggle_recording()
     qtbot.waitUntil(lambda: bool(blocked), timeout=30000)
     assert blocked == ["analysis.need_key"] and w.pages["gameplay"].current is not None
+
+
+def test_focus_reminder_after_start(win, sample_video):
+    from fortnite_coach.db.models import Mistake, Report
+    from tests.helpers import add_test_report
+
+    w, client, qtbot = win
+    assert w.focus_text() is None  # no reports yet: nothing invented
+    add_test_report(w.db, "fpf", {"editing": (50, 2)})
+    with w.db.session() as s:
+        r = s.query(Report).first()
+        s.add(Mistake(report_id=r.id, skill="mechanics", code="MECH_NO_PRE_FIRE", severity="high", timestamp_s=3,
+                      what_happened="TEST DATA"))
+    assert "Today's focus" in w.focus_text()
+    w.toggle_recording()
+    assert w.overlay.text == "● Recording started"  # confirmations have no coach icon
+    qtbot.waitUntil(lambda: "Today's focus" in w.overlay.text, timeout=6000)
+    w.toggle_recording()
+
+
+def test_update_downloads_are_cleaned(tmp_path):
+    from fortnite_coach import updater
+
+    (tmp_path / "old-Setup.exe").write_bytes(b"x" * 1000)
+    assert updater.cleanup(tmp_path) == 1000 and not list(tmp_path.iterdir())
