@@ -31,6 +31,25 @@ class AggregatedReport:
     xp: list[XpAward] = field(default_factory=list)
     not_determinable: list[str] = field(default_factory=list)
     dropped: int = 0
+    stats: dict = field(default_factory=dict)  # summed counts + "_segments" counted / "_total" analyzed
+
+
+def sum_stats(segments: list[ParsedSegment]) -> dict:
+    """Sum each count over the segments where the model could count it; pairs (hits/shots) only where both."""
+    from fortnite_coach.ai.gemini_response_parser import _PAIRS, STAT_KEYS
+
+    out: dict = {"_total": len(segments)}
+    for k in STAT_KEYS:
+        vals = [s.stats[k] for s in segments if k in s.stats]
+        if vals:
+            out[k] = sum(vals)
+            out[f"_{k}_segments"] = len(vals)
+    for part, whole in _PAIRS:  # recompute pairs over the same segments so the percentage is honest
+        both = [s for s in segments if part in s.stats and whole in s.stats]
+        if both:
+            out[part] = sum(s.stats[part] for s in both)
+            out[f"{whole}_for_{part}"] = sum(s.stats[whole] for s in both)
+    return out
 
 
 def _dedupe(items: list[ParsedItem]) -> list[ParsedItem]:
@@ -51,6 +70,7 @@ def aggregate(segments: list[ParsedSegment]) -> AggregatedReport:
         rep.good_plays += s.good_plays
         rep.not_determinable += [x for x in s.not_determinable if x not in rep.not_determinable]
         rep.dropped += s.dropped
+    rep.stats = sum_stats(segments)
     rep.mistakes = _dedupe(rep.mistakes)
     rep.good_plays = _dedupe(rep.good_plays)
 

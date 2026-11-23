@@ -78,7 +78,9 @@ jobs:
           if ($p.ExitCode -ne 0) { throw "Installed self-test failed" }
           # in-app update path: run the same installer again silently with /RELAUNCH=1 -> the app must start by itself
           Get-Process FortniteAICoach -ErrorAction SilentlyContinue | Stop-Process -Force
-          Start-Process $setup -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/CURRENTUSER","/RELAUNCH=1" -Wait
+          # -Wait would also wait for the app the installer starts again; wait for the installer process only
+          $up = Start-Process $setup -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/CURRENTUSER","/RELAUNCH=1" -PassThru
+          if (-not $up.WaitForExit(300000)) { throw "Upgrade installer did not finish" }
           $started = $false
           for ($i = 0; $i -lt 30; $i++) {
             if (Get-Process FortniteAICoach -ErrorAction SilentlyContinue) { $started = $true; break }

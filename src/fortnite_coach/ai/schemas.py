@@ -46,9 +46,28 @@ class SkillAssessmentOut(BaseModel):
     rationale: str
 
 
+class StatsOut(BaseModel):
+    """Counts the model can make from the video itself. null = could not be counted reliably."""
+
+    shots_fired: int | None = Field(default=None, description=(
+        "Shots fired by the player in this segment (firing animation, muzzle flash, ammo dropping or the "
+        "player's gunshot sound). null if you cannot count them reliably"))
+    shots_hit: int | None = Field(default=None, description=(
+        "Of those, shots that visibly hit an opponent (hit marker or damage number). null if unsure"))
+    headshots: int | None = Field(default=None, description=(
+        "Of the hits, headshots: the damage number is yellow/gold (body hits are white). null if unsure"))
+    edits_attempted: int | None = Field(default=None, description="Edits started (edit grid/outline shown)")
+    edits_completed: int | None = Field(default=None, description="Edits that actually opened/changed the piece")
+    fights: int | None = Field(default=None, description="Fights with an opponent in this segment")
+    fights_won: int | None = Field(default=None, description="Fights the player clearly won (opponent knocked/eliminated)")
+    eliminations: int | None = Field(default=None, description="Eliminations/knocks by the player (kill feed / notice)")
+    times_eliminated: int | None = Field(default=None, description="Times the player was knocked or eliminated")
+
+
 class SegmentResult(BaseModel):
     segment_summary: str
     mistakes: list[MistakeOut] = Field(default_factory=list)
     good_plays: list[GoodPlayOut] = Field(default_factory=list)
     skill_assessments: list[SkillAssessmentOut] = Field(default_factory=list)
     not_determinable: list[str] = Field(default_factory=list, description="Things that could not be judged from the video")
+    stats: StatsOut | None = Field(default=None, description="Counts from this segment; null fields when not countable")

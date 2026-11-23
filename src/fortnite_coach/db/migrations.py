@@ -48,12 +48,18 @@ def _v5_mistake_search_query(conn: Connection) -> None:
         conn.execute(text("ALTER TABLE mistakes ADD COLUMN search_query VARCHAR(120) DEFAULT ''"))
 
 
+def _v6_report_stats(conn: Connection) -> None:
+    if "stats" not in _columns(conn, "reports"):
+        conn.execute(text("ALTER TABLE reports ADD COLUMN stats JSON"))
+
+
 MIGRATIONS: list[tuple[int, Callable[[Connection], None]]] = [
     (1, _v1_initial),
     (2, _v2_knowledge_keys),
     (3, _v3_analysis_tables),
     (4, _v4_exercise_template),
     (5, _v5_mistake_search_query),
+    (6, _v6_report_stats),
 ]
 
 LATEST_VERSION = MIGRATIONS[-1][0]

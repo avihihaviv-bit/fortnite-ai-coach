@@ -165,7 +165,8 @@ def run_analysis(
         knowledge = [(e.title, e.content) for e in knowledge_repo.current_entries(db) if e.kind == "fundamental"]
         season = [(e.title, e.content, f"{e.retrieved_at:%Y-%m-%d}", e.source_name or "")
                   for e in knowledge_repo.season_facts(db)]
-        system = system_instruction(req.mode, req.focus, req.language, knowledge, season)
+        system = system_instruction(req.mode, req.focus, req.language, knowledge, season,
+                                    getattr(settings, "player_struggles", ""))
         parsed: list[ParsedSegment] = []
         raw: list[dict] = []
         coverage: list[dict] = []

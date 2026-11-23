@@ -32,6 +32,9 @@ def delete_all_analysis_data(db: Database) -> None:
         for model in (ExerciseCompletion, Exercise, TrainingPlan, XpEvent, Mistake, SkillScore, Report, Session, Video,
                       ApiUsage, AnalysisCache, GeminiFile):
             s.execute(delete(model))
+        from fortnite_coach.db.models import Setting
+
+        s.execute(delete(Setting).where(Setting.key == "coach_chat"))  # the Ask-the-coach history
 
 
 def clear_cache(cache_dir: Path) -> int:

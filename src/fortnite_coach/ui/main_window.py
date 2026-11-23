@@ -17,6 +17,7 @@ from fortnite_coach.ui.context import AppContext
 from fortnite_coach.ui.pages.analysis_page import AnalysisPage
 from fortnite_coach.ui.pages.base import BasePage
 from fortnite_coach.ui.pages.clips_page import ClipsPage
+from fortnite_coach.ui.pages.coach_page import CoachPage
 from fortnite_coach.ui.pages.dashboard import DashboardPage
 from fortnite_coach.ui.pages.profile_page import ProfilePage
 from fortnite_coach.ui.pages.settings_page import SettingsPage
@@ -83,6 +84,7 @@ class MainWindow(QMainWindow):
             "training_sessions": AnalysisPage(self.ctx, training=True),
             "clips": ClipsPage(self.ctx, self.open_clip),
             **{s.value: SkillPage(s) for s in SKILL_PAGES},
+            "coach": CoachPage(self.ctx),
             "training_plan": TrainingPlanPage(self.ctx),
             "progress": ProgressPage(self.ctx),
             "history": HistoryPage(self.ctx),

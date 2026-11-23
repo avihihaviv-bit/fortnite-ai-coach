@@ -78,6 +78,7 @@ class Report(Base):
     raw_json: Mapped[str] = mapped_column(Text)  # the validated AI response, for audit
     # What was and was not analyzed: [{"start_s", "end_s", "analyzed": bool, "note"}]
     coverage: Mapped[list] = mapped_column(JSON, default=list)
+    stats: Mapped[dict | None] = mapped_column(JSON, default=dict)  # AI-counted shots/hits/edits/fights
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     session: Mapped[Session] = relationship(back_populates="report")
     skill_scores: Mapped[list["SkillScore"]] = relationship(cascade="all, delete-orphan", passive_deletes=True)

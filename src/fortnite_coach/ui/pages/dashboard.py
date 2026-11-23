@@ -163,7 +163,9 @@ class DashboardPage(BasePage):
         for key, (name, value) in self.skill_rows.items():
             name.setText(tr(f"skill.{key}"))
             stat = st.skills.get(key)
-            value.setText(nd if stat is None else tr("dash.skill_value", score=f"{stat.average:.0f}", n=stat.samples))
+            from fortnite_coach.coaching.stats_view import score10
+
+            value.setText(nd if stat is None else tr("dash.skill_value", score=f"{score10(stat.average)}/10", n=stat.samples))
         from fortnite_coach.ui.pages.history_page import code_label
 
         self.level_card.set_title(tr("dash.levels"), tr("dash.levels_sub"))

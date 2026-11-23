@@ -11,7 +11,7 @@ from fortnite_coach.core.errors import UsageLimitExceededError
 from fortnite_coach.db.engine import Database
 from fortnite_coach.db.models import ApiUsage
 
-COUNTED_KINDS = ("analysis", "upload", "knowledge")
+COUNTED_KINDS = ("analysis", "upload", "knowledge", "coach")
 
 
 def record(db: Database, *, model: str, kind: str, success: bool, prompt_tokens: int | None = None,
@@ -65,7 +65,7 @@ class UsageSummary:
     per_day: list[tuple[str, int, int, int]] = field(default_factory=list)  # (date, sent, cache, failed)
 
 
-SENT_KINDS = ("analysis", "upload", "knowledge", "live")
+SENT_KINDS = ("analysis", "upload", "knowledge", "live", "coach")
 
 
 def summary(db: Database, days: int) -> UsageSummary:

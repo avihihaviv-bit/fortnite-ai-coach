@@ -5,6 +5,7 @@ from PySide6.QtWidgets import QGridLayout, QHBoxLayout, QLabel, QWidget
 from fortnite_coach.coaching import taxonomy
 from fortnite_coach.core.skills import Skill
 from fortnite_coach.db.repositories.stats_repo import DashboardStats
+from fortnite_coach.coaching.stats_view import score10
 from fortnite_coach.i18n.translator import get_translator, tr
 from fortnite_coach.ui.pages.base import BasePage
 from fortnite_coach.ui.theme import Colors
@@ -112,7 +113,7 @@ class SkillPage(BasePage):
         nd = tr("common.not_enough_data")
         stat = self.stats.skills.get(self.skill.value)
         self.score_tile.set_data(
-            tr("skillpage.score"), None if stat is None else f"{stat.average:.0f}", nd, tr("common.ai_estimate")
+            tr("skillpage.score"), None if stat is None else f"{score10(stat.average)}/10", nd, tr("common.ai_estimate")
         )
         self.sessions_tile.set_data(
             tr("skillpage.sessions"), str(0 if stat is None else stat.samples), nd, tr("common.measured")

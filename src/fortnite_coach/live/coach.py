@@ -41,6 +41,7 @@ SYSTEM = {
            "צפייה, אפליקציה אחרת) או שאין משהו מועיל, ענה בדיוק NONE. לעולם אל תנחש מה שלא רואים."),
 }
 PROMPT = {"en": "Screenshots above. One tip, or NONE.", "he": "הצילומים למעלה. טיפ אחד, או NONE."}
+NOTES = {"en": "The player says they struggle with:", "he": "השחקן אומר שהוא מתקשה ב:"}
 AVOID = {"en": "Do not repeat these recent tips (say something new, or NONE):",
          "he": "אל תחזור על הטיפים האחרונים האלה (תן משהו חדש, או NONE):"}
 
@@ -206,6 +207,8 @@ class LiveCoach(QObject):
             return
         lang = s.language.value if s.language.value in SYSTEM else "en"
         prompt = PROMPT[lang]
+        if s.player_struggles.strip():
+            prompt += "\n" + NOTES[lang] + " " + s.player_struggles.strip()[:300]
         if self.recent_tips:
             prompt += "\n" + AVOID[lang] + " " + " | ".join(self.recent_tips)
         service, model = self._service, self.model

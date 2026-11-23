@@ -93,6 +93,31 @@ class ParsedSegment:
     assessments: list[ParsedAssessment] = field(default_factory=list)
     not_determinable: list[str] = field(default_factory=list)
     dropped: int = 0  # items rejected by validation (shown to the user)
+    stats: dict = field(default_factory=dict)  # validated counts (only keys the model could count)
+
+
+STAT_KEYS = ("shots_fired", "shots_hit", "headshots", "edits_attempted", "edits_completed", "fights", "fights_won",
+             "eliminations", "times_eliminated")
+_PAIRS = (("shots_hit", "shots_fired"), ("headshots", "shots_hit"), ("edits_completed", "edits_attempted"), ("fights_won", "fights"))
+
+
+def clean_stats(raw) -> dict:
+    """Keep plausible non-negative counts; a part can never exceed its whole (e.g. hits <= shots)."""
+    out = {}
+    for k in STAT_KEYS:
+        v = getattr(raw, k, None) if raw is not None and not isinstance(raw, dict) else (raw or {}).get(k)
+        try:
+            v = int(v) if v is not None else None
+        except (TypeError, ValueError):
+            v = None
+        if v is not None and 0 <= v <= 5000:
+            out[k] = v
+    for part, whole in _PAIRS:
+        if part in out and whole in out and out[part] > out[whole]:
+            out.pop(part)  # contradictory: drop the part rather than invent a number
+        elif part in out and whole not in out:
+            out.pop(part)  # a percentage needs both
+    return out
 
 
 def load_segment_result(text: str) -> SegmentResult:
@@ -151,6 +176,7 @@ def validate_segment(result: SegmentResult, index: int, seg_start: float, seg_en
         out.assessments.append(ParsedAssessment(a.skill, None if score is None else float(score),
                                                 max(0, a.evidence_count) if score is not None else 0,
                                                 _clamp01(a.confidence), a.rationale.strip()))
+    out.stats = clean_stats(getattr(result, "stats", None))
     return out
 
 

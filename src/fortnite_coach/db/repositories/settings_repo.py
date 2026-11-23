@@ -44,6 +44,11 @@ def _upgrade(s: AppSettings) -> AppSettings:
         if s.live.hotkey == "Ctrl+Shift+F11":
             s.live.hotkey = "F3"
         s.settings_version = 2
+    if s.settings_version < 3:
+        # 1.7: analyze up to 10 minutes by default (was 5), unless the player had changed it
+        if s.limits.max_video_seconds == 300:
+            s.limits.max_video_seconds = 600
+        s.settings_version = 3
     return s
 
 

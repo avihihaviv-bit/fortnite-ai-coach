@@ -29,7 +29,7 @@ def fmt_ts(seconds: float) -> str:
 
 
 def system_instruction(mode: GameMode, focus: list[str], language: str, knowledge: list[tuple[str, str]],
-                       season: list[tuple[str, str, str, str]] | None = None) -> str:
+                       season: list[tuple[str, str, str, str]] | None = None, player_notes: str = "") -> str:
     """season: [(title, content, as_of 'YYYY-MM-DD', source)] - only fresh, sourced facts."""
     lang = "Hebrew" if language == "he" else "English"
     focus_names = ", ".join(focus) or "all skills"
@@ -37,6 +37,9 @@ def system_instruction(mode: GameMode, focus: list[str], language: str, knowledg
         "You are an elite competitive Fortnite coach (keyboard and mouse player) reviewing a recorded match.",
         f"Game mode: {mode.value}. Focus skills: {focus_names}.",
         "What matters most in this mode: " + MODE_HINTS.get(mode, MODE_HINTS[GameMode.OTHER]),
+        *([f"The player says they struggle with (their own words): \"{player_notes.strip()[:600]}\". "
+           "Pay special attention to these situations and say clearly whether the video confirms it."]
+          if player_notes.strip() else []),
         "",
         "STRICT RULES:",
         "- Judge ONLY what is visible or audible in the video. Never invent events.",
@@ -50,6 +53,11 @@ def system_instruction(mode: GameMode, focus: list[str], language: str, knowledg
         "- Be concrete about sides and pieces (left/right wall, cone, floor, ramp) when the video shows them.",
         "- A skill score (0-100) is allowed only when this segment shows enough evidence; otherwise null.",
         "- Weapon stats, items and season meta change: do not state them as current facts.",
+        "- stats: COUNT only what you can see or hear in this segment. A shot = the player's firing animation,",
+        "  muzzle flash or gunshot sound; a hit = a hit marker or damage number on an opponent; a headshot = a",
+        "  hit whose damage number is yellow/gold (white = body). An edit attempt =",
+        "  the edit grid/outline appears; completed = the piece actually opens/changes. Use null for any count",
+        "  you cannot make reliably (e.g. frames too sparse). Never estimate a count you did not observe.",
         "- For every mistake, search_query is an ENGLISH phrase (4-9 words) the player would type on YouTube/TikTok",
         "  to find a tutorial for exactly that situation: name the mechanic and context (e.g. 'fortnite how to",
         "  pre fire after double edit box fight'), not a generic topic.",

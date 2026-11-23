@@ -21,7 +21,7 @@ class UsageLimits(BaseModel):
     """Hard limits checked BEFORE any Gemini request is sent."""
 
     max_requests_per_day: int = Field(default=20, ge=0, le=1000)
-    max_video_seconds: int = Field(default=300, ge=10, le=3600)
+    max_video_seconds: int = Field(default=600, ge=10, le=3600)  # 10 minutes = about 5 requests
     max_frames_per_analysis: int = Field(default=24, ge=1, le=200)
     max_upload_mb: int = Field(default=100, ge=1, le=2000)
 
@@ -86,6 +86,7 @@ class AppSettings(BaseModel):
     ffprobe_path: str | None = None
     confirm_before_each_request: bool = True
     hardware_checked: bool = False  # onboarding: the user ran "Check hardware" successfully at least once
+    player_struggles: str = Field(default="", max_length=600)  # in the player's own words; used in every analysis
     focus_reminder: bool = True  # when recording / Live starts: show your #1 thing to work on (from past reports)
     check_updates: bool = True  # look for a newer version once at startup (only tells you; never installs by itself)
     close_to_tray: bool = True  # keep running in the tray so recording hotkeys keep working

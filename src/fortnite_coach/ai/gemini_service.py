@@ -203,6 +203,24 @@ class GeminiService:
         finally:
             self.max_retries = saved
 
+    def ask_json(self, system_instruction: str, prompt: str, schema: type) -> GenerateResult:
+        """A text-only question with a structured (JSON) answer: used by Ask the coach."""
+        from google.genai import types
+
+        cfg = types.GenerateContentConfig(system_instruction=system_instruction, response_mime_type="application/json",
+                                          response_schema=schema, temperature=0.4)
+
+        def call():
+            resp = self.client.models.generate_content(model=self.model, contents=prompt, config=cfg)
+            text = getattr(resp, "text", None)
+            if not text:
+                raise GeminiError("empty response", i18n_key="gemini.err_blocked")
+            usage = getattr(resp, "usage_metadata", None)
+            return GenerateResult(text, getattr(usage, "prompt_token_count", None),
+                                  getattr(usage, "candidates_token_count", None))
+
+        return self._with_retries(call)
+
     def list_models(self, timeout_s: float | None = None) -> list[str]:
         from google.genai import types
 

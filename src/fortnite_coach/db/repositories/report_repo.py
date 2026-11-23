@@ -30,7 +30,7 @@ def save_report(db: Database, session_id: int, *, model: str, prompt_version: st
         rep = Report(session_id=session_id, model=model, prompt_version=prompt_version, summary=agg.summary,
                      raw_json=json.dumps({"segments": raw, "not_determinable": agg.not_determinable,
                                           "dropped_items": agg.dropped}, ensure_ascii=False),
-                     coverage=coverage)
+                     coverage=coverage, stats=agg.stats or {})
         rep.skill_scores = [SkillScore(skill=k.skill, score=k.score, confidence=k.confidence,
                                        evidence_count=k.evidence_count) for k in agg.skills]
         rep.mistakes = [Mistake(skill=m.skill, code=m.code, severity=m.severity, timestamp_s=m.start_s,

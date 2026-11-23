@@ -132,9 +132,21 @@ class HistoryPage(BasePage):
             summary.setWordWrap(True)
             add(summary)
 
-        scored = [s for s in d.scores if s.score is not None]
-        scores_text = "   ·   ".join(f"{tr(f'skill.{s.skill}')} {s.score:.0f}" for s in scored) or tr("common.not_enough_data")
-        scores = QLabel(f"<b>{tr('report.scores')}</b> ({tr('common.ai_estimate')})<br>{scores_text}")
+        from fortnite_coach.coaching.stats_view import score10, stats_lines
+
+        stats = QLabel(f"<b>{tr('stats.title')}</b> ({tr('stats.estimate')})<br>"
+                       + "<br>".join(stats_lines(getattr(r, "stats", None), tr)))
+        stats.setWordWrap(True)
+        add(stats)
+
+        scored = sorted((s for s in d.scores if s.score is not None), key=lambda s: s.score)
+        rows = [f"{tr(f'skill.{s.skill}')}: <b>{score10(s.score)}/10</b> &nbsp;{'■' * round(s.score / 10)}"
+                f"<span style='color:#3A3D46'>{'■' * (10 - round(s.score / 10))}</span>" for s in scored]
+        missing = [tr(f"skill.{s.skill}") for s in d.scores if s.score is None]
+        scores_text = "<br>".join(rows) or tr("common.not_enough_data")
+        if missing:
+            scores_text += "<br><span style='color:#9CA3AF'>" + tr("stats.no_score", skills=", ".join(missing)) + "</span>"
+        scores = QLabel(f"<b>{tr('stats.scores_title')}</b> ({tr('common.ai_estimate')})<br>{scores_text}")
         scores.setWordWrap(True)
         add(scores)
 
