@@ -365,3 +365,157 @@ class AboutCard(Card):
         self.live_btn.setVisible(docs_path("LIVE_COACH.md").exists())
         self.result.setText(self.result_text)
         self.privacy.setText(tr("about.privacy_summary") + "\n" + tr("about.live_status"))
+
+
+class UpdateCard(Card):
+    """Check for updates / install: downloads the new installer from this project's GitHub Releases,
+    verifies its SHA-256, runs it (it closes the app, upgrades and starts it again)."""
+
+    def __init__(self, ctx: AppContext):
+        from fortnite_coach import updater
+
+        super().__init__()
+        self.ctx = ctx
+        self.updater = updater
+        self.info = None            # UpdateInfo when a newer version exists
+        self.state = "idle"         # idle | checking | latest | available | downloading | error | installing
+        self.error = ""
+        self.cancel = None
+        self.status = _wrap(QLabel())
+        self.notes = _wrap(QLabel(objectName="StatHint"))
+        row = QHBoxLayout()
+        self.check_btn = QPushButton()
+        self.check_btn.clicked.connect(lambda: self.check(manual=True))
+        self.install_btn = QPushButton(objectName="PrimaryButton")
+        self.install_btn.clicked.connect(self.install)
+        self.cancel_btn = QPushButton()
+        self.cancel_btn.clicked.connect(lambda: self.cancel and self.cancel.set())
+        for b in (self.check_btn, self.install_btn, self.cancel_btn):
+            row.addWidget(b)
+        row.addStretch(1)
+        self.bar = QProgressBar()
+        self.bar.hide()
+        self.body.addWidget(self.status)
+        self.body.addLayout(row)
+        self.body.addWidget(self.bar)
+        self.body.addWidget(self.notes)
+
+    def confirm(self, title: str, text: str) -> bool:
+        return QMessageBox.question(self, title, text) == QMessageBox.StandardButton.Yes
+
+    def check(self, manual: bool = False, on_found=None) -> None:
+        if self.state in ("checking", "downloading", "installing"):
+            return
+        self.state, self.error = "checking", ""
+        self.render()
+
+        def done(info):
+            self.info = info
+            self.state = "available" if info else "latest"
+            self.render()
+            if info and on_found:
+                on_found(info)
+
+        def failed(err):
+            self.state = "error" if manual else "idle"
+            self.error = tr(getattr(err, "i18n_key", "update.err_network"))
+            self.render()
+
+        run_task(self.updater.check, done, failed)
+
+    def busy_reason(self) -> str | None:
+        win = self.window()
+        if getattr(getattr(win, "recording", None), "is_recording", False) or \
+                getattr(getattr(win, "live", None), "active", False):
+            return "update.busy_recording"
+        for key in ("gameplay", "training_sessions"):
+            page = getattr(win, "pages", {}).get(key)
+            if page is not None and page.job is not None and page.job.running:
+                return "update.busy_analysis"
+        return None
+
+    def install(self) -> None:
+        import threading
+
+        if self.info is None or self.state in ("downloading", "installing"):
+            return
+        if not self.updater.can_self_update():
+            self.state, self.error = "error", tr("update.err_not_installed")
+            self.render()
+            return
+        reason = self.busy_reason()
+        if reason:
+            self.state, self.error = "error", tr(reason)
+            self.render()
+            return
+        mb = f"{self.info.size / 1_048_576:.0f}" if self.info.size else "?"
+        if not self.confirm(tr("update.title"), tr("update.confirm", version=self.info.version, mb=mb)):
+            return
+        self.state, self.cancel = "downloading", threading.Event()
+        self.bar.setRange(0, 100)
+        self.bar.setValue(0)
+        self.render()
+        info, folder, cancel = self.info, self.ctx.paths.cache_dir / "updates", self.cancel
+        def progress(done, total):
+            self._progress = (done, total)
+
+        self._progress = (0, 0)
+        from PySide6.QtCore import QTimer
+
+        self._tick = QTimer(self)
+        self._tick.timeout.connect(self._show_progress)
+        self._tick.start(300)
+        run_task(lambda: self.updater.download(info, folder, progress, cancel), self._downloaded, self._failed)
+
+    def _show_progress(self) -> None:
+        done, total = self._progress
+        if total:
+            self.bar.setValue(int(done * 100 / total))
+            self.status.setText(tr("update.downloading", done=f"{done / 1_048_576:.0f}", total=f"{total / 1_048_576:.0f}"))
+
+    def _downloaded(self, path) -> None:
+        self._tick.stop()
+        self.state = "installing"
+        self.render()
+        try:
+            self.updater.launch_installer(path)
+        except Exception as e:
+            self.state, self.error = "error", tr(getattr(e, "i18n_key", "update.err_launch"))
+            self.render()
+            return
+        win = self.window()
+        if hasattr(win, "quit_app"):
+            win.quit_app()  # the installer replaces the files and starts the new version
+
+    def _failed(self, err) -> None:
+        if hasattr(self, "_tick"):
+            self._tick.stop()
+        key = getattr(err, "i18n_key", "update.err_network")
+        self.state = "idle" if key == "update.cancelled" else "error"
+        self.error = "" if key == "update.cancelled" else tr(key)
+        self.render()
+
+    def render(self) -> None:
+        self.set_title(tr("update.title"), tr("update.subtitle", version=__version__))
+        st = self.state
+        text = {
+            "idle": tr("update.idle"),
+            "checking": tr("update.checking"),
+            "latest": tr("update.latest", version=__version__),
+            "available": tr("update.available", version=self.info.version if self.info else "?"),
+            "downloading": tr("update.downloading", done="0", total="?"),
+            "installing": tr("update.installing"),
+            "error": "⚠  " + self.error,
+        }[st]
+        if st != "downloading" or not getattr(self, "_progress", (0, 0))[1]:
+            self.status.setText(text)
+        self.check_btn.setText(tr("update.check"))
+        self.check_btn.setEnabled(st not in ("checking", "downloading", "installing"))
+        self.install_btn.setText(tr("update.install", version=self.info.version) if self.info else tr("update.install_plain"))
+        self.install_btn.setVisible(self.info is not None and st in ("available", "error"))
+        self.cancel_btn.setText(tr("common.cancel"))
+        self.cancel_btn.setVisible(st == "downloading")
+        self.bar.setVisible(st == "downloading")
+        notes = (self.info.notes.strip() if self.info else "")
+        self.notes.setText(tr("update.notes", notes=notes[:600]) if notes and st in ("available", "error") else
+                           tr("update.how"))

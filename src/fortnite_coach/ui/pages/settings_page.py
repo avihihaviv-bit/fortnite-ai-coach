@@ -208,7 +208,7 @@ class SettingsPage(BasePage):
         self.delete_all_btn.clicked.connect(self._on_delete_all)
         self._counts = {"videos": 0, "sessions": 0, "reports": 0}
         self._data_dir = ""
-        from fortnite_coach.ui.pages.settings_cards import AboutCard, KnowledgeCard, LiveCard, UsageCard
+        from fortnite_coach.ui.pages.settings_cards import AboutCard, KnowledgeCard, LiveCard, UpdateCard, UsageCard
 
         self.live_card = LiveCard(ctx)
         self.live_card.saved.connect(self.recording_settings_saved)
@@ -216,13 +216,14 @@ class SettingsPage(BasePage):
         self.usage_card = UsageCard(ctx)
         self.knowledge_card = KnowledgeCard(ctx)
         self.about_card = AboutCard(ctx)
-        for c in (self.usage_card, self.knowledge_card, self.about_card):
+        self.update_card = UpdateCard(ctx)
+        for c in (self.usage_card, self.knowledge_card, self.update_card, self.about_card):
             self.content.addWidget(c)
         self._load_recording_fields()
         self.finish()
 
     def refresh_cards(self) -> None:
-        for c in (self.live_card, self.usage_card, self.knowledge_card, self.about_card):
+        for c in (self.live_card, self.usage_card, self.knowledge_card, self.update_card, self.about_card):
             c.render()
 
     # ================= Gemini key =================

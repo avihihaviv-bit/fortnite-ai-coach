@@ -137,6 +137,13 @@ class MainWindow(QMainWindow):
         self._safe("data", self.refresh_data)
         self._safe("texts", self.retranslate)
         self.navigate("dashboard")
+        from fortnite_coach import updater
+
+        if self.settings.check_updates and updater.can_self_update():
+            from PySide6.QtCore import QTimer
+
+            QTimer.singleShot(8000, lambda: self.settings_page.update_card.check(
+                on_found=lambda info: self.tray.notify(tr("update.found_tray", version=info.version))))
         if self.settings.hardware_checked and recording_source is None:
             # A few short ffmpeg checks in the background, so the start hotkey works right away from the tray.
             self._safe("hardware check", self.recording.detect)
