@@ -184,7 +184,8 @@ def test_live_settings_card(win):
     card.interval.setValue(20)
     card.hotkey.setText(w.settings.recording.hotkey_start)  # clashes with recording
     card.save()
-    assert not w.settings.live.acknowledged and "Invalid" in card.feedback.text()
+    assert "Invalid" in card.feedback.text() and w.settings.live.interval_s != 20  # bad hotkey: nothing else saved
+    assert w.settings.live.acknowledged  # the tick itself is saved at once
     card.hotkey.setText("Ctrl+Shift+F12")
     card.save()
     assert w.settings.live.acknowledged and w.settings.live.interval_s == 20
@@ -472,3 +473,26 @@ def test_update_downloads_are_cleaned(tmp_path):
 
     (tmp_path / "old-Setup.exe").write_bytes(b"x" * 1000)
     assert updater.cleanup(tmp_path) == 1000 and not list(tmp_path.iterdir())
+
+
+def test_ticking_live_box_enables_start_without_save(win):
+    """User report: ticked the Live box and Start stayed disabled (the tick was only saved by a Save click)."""
+    w, client, qtbot = win
+    connect(w, qtbot)
+    page = w.pages["gameplay"]
+    page.start_mode.setCurrentIndex(page.start_mode.findData("live"))
+    assert not page.rec_start.isEnabled() and page.rec_fix.isVisibleTo(page)
+    page.rec_fix.click()
+    assert w.current_key == "settings"
+    w.settings_page.live_card.ack.setChecked(True)          # just the tick, no Save
+    assert w.settings.live.acknowledged
+    assert page.rec_start.isEnabled() and not page.rec_fix.isVisibleTo(page)  # re-checked at once
+    assert "Live Coach is on" in w.settings_page.live_card.feedback.text()
+
+
+def test_fix_button_points_to_key_when_not_connected(win):
+    w, client, qtbot = win
+    _enable_live(w)
+    page = w.pages["gameplay"]
+    page.start_mode.setCurrentIndex(page.start_mode.findData("live"))
+    assert "Gemini" in page.rec_info.text() and page.rec_fix.isVisibleTo(page)

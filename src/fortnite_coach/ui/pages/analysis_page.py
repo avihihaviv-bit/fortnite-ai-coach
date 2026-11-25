@@ -91,9 +91,13 @@ class AnalysisPage(BasePage):
         self.rec_stop.clicked.connect(self._stop_session)
         self.rec_load = QPushButton()
         self.rec_load.clicked.connect(self.load_last_recording)
+        self.rec_fix = QPushButton()
+        self.rec_fix.clicked.connect(self._fix_live)
+        self.rec_fix.hide()
         rec_btns.addWidget(self.rec_start)
         rec_btns.addWidget(self.rec_stop)
         rec_btns.addWidget(self.rec_load)
+        rec_btns.addWidget(self.rec_fix)
         rec_btns.addStretch(1)
         self.rec_info = QLabel(objectName="StatHint")
         self.rec_info.setWordWrap(True)
@@ -273,6 +277,16 @@ class AnalysisPage(BasePage):
                     page._render_recording()
         self._render_recording()
 
+    def _fix_live(self) -> None:
+        """Jump to the setting that blocks Live Coach (the Live tick box, or the Gemini key test)."""
+        win = self.window()
+        sp = getattr(win, "settings_page", None)
+        if sp is None:
+            return
+        win.navigate("settings")
+        reason = self.ctx.live.block_reason() if self.ctx.live is not None else None
+        sp.show_card(sp.gemini_card if reason == "live.need_gemini" else sp.live_card)
+
     def _live_active(self) -> bool:
         return bool(self.ctx.live is not None and self.ctx.live.active)
 
@@ -358,6 +372,8 @@ class AnalysisPage(BasePage):
         live_reason = live.block_reason() if (live is not None and mode != "record") else None
         self.rec_start.setEnabled(not active and (can_rec or not needs_rec) and live_reason is None)
         self.rec_stop.setEnabled(active)
+        self.rec_fix.setText(tr("live.fix"))
+        self.rec_fix.setVisible(bool(live_reason) and live_reason in ("live.need_ack", "live.need_gemini") and not active)
         self.rec_load.setText(tr("rec.load_last"))
         self.rec_load.setVisible(bool(self._last_recording) and not rc.is_recording)
         lines: list[str] = []

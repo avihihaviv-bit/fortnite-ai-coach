@@ -694,5 +694,8 @@
   "coach.remember": "לזכור במשחק:",
   "coach.history_title": "תשובות קודמות",
   "coach.history_sub": "נשמרות רק במחשב הזה.",
-  "coach.history_empty": "עוד אין תשובות קודמות."
+  "coach.history_empty": "עוד אין תשובות קודמות.",
+  "live.enabled": "מאמן הלייב הופעל. בכרטיס ההקלטה בחר \"מאמן לייב בלבד\" או \"הקלטה + לייב\" ולחץ התחל (או F3).",
+  "live.disabled": "מאמן הלייב כבוי.",
+  "live.fix": "לתקן"
 }

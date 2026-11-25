@@ -109,6 +109,7 @@ class MainWindow(QMainWindow):
         self.settings_page.test_requested.connect(self.run_connection_test)
         self.settings_page.gemini_settings_saved.connect(self.refresh_gemini_status)
         self.settings_page.recording_settings_saved.connect(self.register_hotkeys)
+        self.settings_page.recording_settings_saved.connect(lambda: self._on_session_changed())
         for key in ("gameplay", "training_sessions"):
             self.pages[key].video_imported.connect(self.refresh_data)
         self.recording.capabilities_ready.connect(self._on_capabilities)
@@ -248,6 +249,8 @@ class MainWindow(QMainWindow):
             self.onboarding.render()
         for key in ("gameplay", "training_sessions"):
             self.pages[key].refresh_status()
+        if hasattr(self, "live"):
+            self._on_session_changed()  # Live needs a connected key: re-check the Start button now
 
     def _save_settings(self, settings: AppSettings) -> None:
         self.settings = settings

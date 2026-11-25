@@ -51,6 +51,7 @@ class LiveCard(Card):
         self.ctx = ctx
         self.warning = _wrap(QLabel(objectName="ReasonBox"))
         self.ack = QCheckBox()
+        self.ack.toggled.connect(self._ack_toggled)
         form = QFormLayout()
         form.setHorizontalSpacing(16)
         self.labels = {k: QLabel() for k in ("model", "interval", "frames", "max", "show", "hotkey")}
@@ -86,7 +87,9 @@ class LiveCard(Card):
 
     def load(self) -> None:
         lv = self.ctx.settings().live
+        self.ack.blockSignals(True)
         self.ack.setChecked(lv.acknowledged)
+        self.ack.blockSignals(False)
         self.interval.setValue(lv.interval_s)
         self.frames.setValue(lv.frames)
         self.max_day.setValue(lv.max_tips_per_day)
@@ -109,6 +112,19 @@ class LiveCard(Card):
             self.model_combo.addItem(n, n)
         self.model_combo.setCurrentIndex(max(0, self.model_combo.findData(current)))
         self.model_combo.blockSignals(False)
+
+    def _ack_toggled(self, on: bool) -> None:
+        """The tick is the on/off switch: it takes effect at once, no Save click needed."""
+        s = self.ctx.settings()
+        if s.live.acknowledged == on:
+            return
+        lv = s.live.model_copy()
+        lv.acknowledged = on
+        s.live = lv
+        self.ctx.save_settings(s)
+        self._msg = tr("live.enabled" if on else "live.disabled")
+        self.saved.emit()
+        self.render()
 
     def save(self) -> None:
         from fortnite_coach.recording.hotkeys import HotkeyError, parse_hotkey

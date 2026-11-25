@@ -224,6 +224,13 @@ class SettingsPage(BasePage):
         self._load_recording_fields()
         self.finish()
 
+    def show_card(self, card) -> None:
+        from PySide6.QtWidgets import QScrollArea
+
+        area = self.findChild(QScrollArea)
+        if area is not None:
+            area.ensureWidgetVisible(card, 0, 40)
+
     def refresh_cards(self) -> None:
         for c in (self.live_card, self.usage_card, self.knowledge_card, self.update_card, self.about_card):
             c.render()

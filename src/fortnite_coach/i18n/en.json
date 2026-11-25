@@ -694,5 +694,8 @@
   "coach.remember": "Remember in-game:",
   "coach.history_title": "Earlier answers",
   "coach.history_sub": "Kept only on this PC.",
-  "coach.history_empty": "No earlier answers yet."
+  "coach.history_empty": "No earlier answers yet.",
+  "live.enabled": "Live Coach is on. Choose \"Live Coach only\" or \"Record + Live\" on the Record card and press Start (or F3).",
+  "live.disabled": "Live Coach is off.",
+  "live.fix": "Fix it"
 }
