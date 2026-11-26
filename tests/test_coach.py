@@ -81,3 +81,10 @@ def test_daily_limit_blocks_the_question(win):
     page.ask()
     qtbot.waitUntil(lambda: not page.asking, timeout=10000)
     assert "limit" in page.ask_status.text().lower() and not client.generate_calls[1:]
+
+
+def test_struggles_box_saves_itself(win):
+    w, client, qtbot = win
+    page = w.pages["coach"]
+    page.notes.setPlainText("I miss shotgun shots up close")
+    qtbot.waitUntil(lambda: w.settings.player_struggles == "I miss shotgun shots up close", timeout=3000)

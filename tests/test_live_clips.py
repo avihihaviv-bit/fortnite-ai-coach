@@ -184,7 +184,8 @@ def test_live_settings_card(win):
     card.interval.setValue(20)
     card.hotkey.setText(w.settings.recording.hotkey_start)  # clashes with recording
     card.save()
-    assert "Invalid" in card.feedback.text() and w.settings.live.interval_s != 20  # bad hotkey: nothing else saved
+    assert "Invalid" in card.feedback.text() and w.settings.live.hotkey == "F3"  # bad hotkey kept out
+    assert w.settings.live.interval_s == 20  # everything else saved automatically
     assert w.settings.live.acknowledged  # the tick itself is saved at once
     card.hotkey.setText("Ctrl+Shift+F12")
     card.save()

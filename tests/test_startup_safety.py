@@ -147,3 +147,36 @@ def test_stuck_connection_test_gives_up(qtbot, tmp_path):
     assert w.settings.gemini.last_test_error == "gemini.err_test_timeout"  # the late answer was ignored
     w._quitting = True
     db.close()
+
+
+def test_settings_save_themselves_and_survive_redraws(qtbot, tmp_path):
+    """User-facing trap: edits were lost when the card redrew itself before Save was clicked."""
+    from fortnite_coach.app import create_app
+    from fortnite_coach.config.paths import AppPaths
+    from fortnite_coach.db.engine import Database
+    from fortnite_coach.db.repositories import settings_repo
+    from fortnite_coach.ui.main_window import MainWindow
+
+    create_app([])
+    paths = AppPaths(tmp_path / "h").ensure()
+    db = Database(paths.database).init()
+    before = settings_repo.load_settings(db)
+    w = MainWindow(db, paths, recording_source="test")
+    qtbot.addWidget(w)
+    sp = w.settings_page
+    # opening the app must not change anything (no half-loaded saves)
+    after_open = settings_repo.load_settings(db)
+    assert after_open.live == before.live and after_open.recording == before.recording
+    sp.limit_spin.setValue(37)
+    sp.refresh_cards()
+    sp._render_gemini()                      # redraw (happens every second during a test)
+    assert sp.limit_spin.value() == 37 and settings_repo.load_settings(db).limits.max_requests_per_day == 37
+    sp.auto_analyze.setChecked(True)
+    assert settings_repo.load_settings(db).recording.auto_analyze
+    sp.hk_toggle.setText("F3")               # clashes with Live: hotkey kept, nothing else lost
+    assert settings_repo.load_settings(db).recording.hotkey_toggle == "F2"
+    card = sp.live_card
+    card.interval.setValue(25)
+    assert settings_repo.load_settings(db).live.interval_s == 25
+    w._quitting = True
+    db.close()

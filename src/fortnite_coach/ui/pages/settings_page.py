@@ -106,6 +106,10 @@ class SettingsPage(BasePage):
         self.limit_spin.setRange(1, 1000)
         self.minutes_spin = QSpinBox()
         self.minutes_spin.setRange(1, 60)
+        # every change is saved at once (the card is redrawn from saved settings, which wiped unsaved edits)
+        self.model_combo.activated.connect(lambda _i: self._save_gemini())
+        self.limit_spin.valueChanged.connect(lambda _v: self._save_gemini())
+        self.minutes_spin.valueChanged.connect(lambda _v: self._save_gemini())
         gform.addRow(self.model_label, self.model_combo)
         gform.addRow(self.limit_label, self.limit_spin)
         gform.addRow(self.minutes_label, self.minutes_spin)
@@ -169,6 +173,13 @@ class SettingsPage(BasePage):
         rform.addRow(self.rec_labels["hotkey_stop"], self.hk_stop)
         rform.addRow("", self.hk_enabled)
         self.rec_card.body.addLayout(rform)
+        for combo in (self.res_combo, self.fps_combo, self.quality_combo, self.encoder_combo, self.audio_combo):
+            combo.activated.connect(lambda _i: self._save_recording())
+        for box in (self.auto_load, self.auto_analyze, self.focus_reminder, self.hk_enabled):
+            box.toggled.connect(lambda _on: self._save_recording())
+        for hk in (self.hk_toggle, self.hk_start, self.hk_stop):
+            hk.textChanged.connect(lambda _t: self._save_recording())
+        self.folder_edit.editingFinished.connect(self._save_recording)
         rbtns = QHBoxLayout()
         self.rec_save_btn = QPushButton(objectName="PrimaryButton")
         self.rec_save_btn.clicked.connect(self._save_recording)
@@ -317,6 +328,9 @@ class SettingsPage(BasePage):
         settings = self.ctx.settings()
         g = settings.gemini.model_copy()
         model = self.model_combo.currentData()
+        if (model == g.model and self.limit_spin.value() == settings.limits.max_requests_per_day
+                and self.minutes_spin.value() * 60 == settings.limits.max_video_seconds):
+            return  # nothing changed
         if model and model != g.model:
             g.model = model
             g.model_user_chosen = True
@@ -391,9 +405,14 @@ class SettingsPage(BasePage):
             self.model_combo.addItem(m + ("" if avail else "  " + tr("settings.model_unavailable")), m)
         self.model_combo.setCurrentIndex(max(0, self.model_combo.findData(g.model)))
         self.model_combo.blockSignals(False)
-        self.limit_spin.setValue(lim.max_requests_per_day)
-        self.minutes_spin.setValue(max(1, lim.max_video_seconds // 60))
+        for spin, value in ((self.limit_spin, lim.max_requests_per_day),
+                            (self.minutes_spin, max(1, lim.max_video_seconds // 60))):
+            if spin.value() != value and not spin.hasFocus():  # never fight the user while they type
+                spin.blockSignals(True)
+                spin.setValue(value)
+                spin.blockSignals(False)
         self.gemini_save_btn.setText(tr("common.save"))
+        self.gemini_save_btn.hide()  # saved automatically
         self.usage_label.setText(tr("settings.usage_today", used=usage_tracker.requests_today(self.ctx.db),
                                     limit=lim.max_requests_per_day, tokens=usage_tracker.tokens_today(self.ctx.db)))
 
@@ -403,7 +422,16 @@ class SettingsPage(BasePage):
         if folder:
             self.folder_edit.setText(folder)
 
+    _loading_rec = False
+
     def _load_recording_fields(self) -> None:
+        self._loading_rec = True  # filling the fields must not save half-loaded values
+        try:
+            self._fill_recording_fields()
+        finally:
+            self._loading_rec = False
+
+    def _fill_recording_fields(self) -> None:
         rec = self.ctx.settings().recording
         self.folder_edit.setText(rec.output_dir or str(default_output_dir()))
         for combo, value in ((self.res_combo, rec.resolution), (self.fps_combo, rec.fps), (self.quality_combo, rec.quality)):
@@ -418,10 +446,13 @@ class SettingsPage(BasePage):
         self.hk_enabled.setChecked(rec.hotkeys_enabled)
 
     def _save_recording(self) -> None:
+        if self._loading_rec:
+            return
         settings = self.ctx.settings()
         rec = settings.recording.model_copy()
         start, stop = self.hk_start.text().strip(), self.hk_stop.text().strip()
         toggle = self.hk_toggle.text().strip()
+        hotkeys_ok = True
         try:
             combos = [parse_hotkey(start), parse_hotkey(stop)] + ([parse_hotkey(toggle)] if toggle else [])
             try:
@@ -431,23 +462,22 @@ class SettingsPage(BasePage):
             if len(set(combos)) != len(combos):
                 raise HotkeyError("every hotkey must be different")
         except HotkeyError:
-            self._rec_msg = ("rec.err_hotkey", {})
-            self._render_recording()
-            return
+            hotkeys_ok = False  # keep the previous hotkeys; everything else is still saved
         rec.output_dir = self.folder_edit.text().strip() or None
         rec.resolution = self.res_combo.currentData()
         rec.fps = self.fps_combo.currentData()
         rec.quality = self.quality_combo.currentData()
         rec.encoder = self.encoder_combo.currentData() or "auto"
         rec.audio_device = self.audio_combo.currentData() or None
-        rec.hotkey_start, rec.hotkey_stop = start, stop
-        rec.hotkey_toggle, rec.auto_load = toggle, self.auto_load.isChecked()
+        if hotkeys_ok:
+            rec.hotkey_start, rec.hotkey_stop, rec.hotkey_toggle = start, stop, toggle
+        rec.auto_load = self.auto_load.isChecked()
         rec.auto_analyze = self.auto_analyze.isChecked() and rec.auto_load
         settings.focus_reminder = self.focus_reminder.isChecked()
         rec.hotkeys_enabled = self.hk_enabled.isChecked()
         settings.recording = rec
         self.ctx.save_settings(settings)
-        self._rec_msg = ("rec.settings_saved", {})
+        self._rec_msg = ("rec.settings_saved", {}) if hotkeys_ok else ("rec.err_hotkey", {})
         self.recording_settings_saved.emit()
         self._render_recording()
 
@@ -486,6 +516,7 @@ class SettingsPage(BasePage):
         self.hk_enabled.setText(tr("rec.hotkeys_enable") if hotkeys_supported() else tr("rec.hotkeys_windows_only"))
         self.hk_enabled.setEnabled(hotkeys_supported())
         self.rec_save_btn.setText(tr("common.save"))
+        self.rec_save_btn.hide()  # saved automatically
         self.detect_btn.setText(tr("rec.detect"))
         self.rec_feedback.setText(tr(self._rec_msg[0], **self._rec_msg[1]) if self._rec_msg else "")
         rc = self.ctx.recording

@@ -51,6 +51,13 @@ class CoachPage(BasePage):
         self.notes = QPlainTextEdit()
         self.notes.setFixedHeight(90)
         self.notes.setPlainText(ctx.settings().player_struggles)
+        from PySide6.QtCore import QTimer
+
+        self._notes_timer = QTimer(self)  # saved by itself a second after typing stops
+        self._notes_timer.setSingleShot(True)
+        self._notes_timer.setInterval(1000)
+        self._notes_timer.timeout.connect(self.save_notes)
+        self.notes.textChanged.connect(self._notes_timer.start)
         row = QHBoxLayout()
         self.notes_save = QPushButton(objectName="PrimaryButton")
         self.notes_save.clicked.connect(self.save_notes)
@@ -104,6 +111,8 @@ class CoachPage(BasePage):
 
     def save_notes(self) -> None:
         s = self.ctx.settings()
+        if s.player_struggles == self.notes.toPlainText().strip()[:600]:
+            return
         s.player_struggles = self.notes.toPlainText().strip()[:600]
         self.ctx.save_settings(s)
         self.notes_status.setText(tr("coach.notes_saved"))

@@ -68,6 +68,10 @@ class LiveCard(Card):
         for k, w in (("model", self.model_combo), ("interval", self.interval), ("frames", self.frames), ("max", self.max_day),
                      ("show", self.show_s), ("hotkey", self.hotkey)):
             form.addRow(self.labels[k], w)
+        for spin in (self.interval, self.frames, self.max_day, self.show_s):
+            spin.valueChanged.connect(lambda _v: self.save())
+        self.model_combo.activated.connect(lambda _i: self.save())
+        self.hotkey.textChanged.connect(lambda _t: self.save())
         row = QHBoxLayout()
         self.save_btn = QPushButton(objectName="PrimaryButton")
         self.save_btn.clicked.connect(self.save)
@@ -85,7 +89,16 @@ class LiveCard(Card):
         self._msg = ""
         self.load()
 
+    _loading = False
+
     def load(self) -> None:
+        self._loading = True  # filling the fields must not save half-loaded values
+        try:
+            self._load()
+        finally:
+            self._loading = False
+
+    def _load(self) -> None:
         lv = self.ctx.settings().live
         self.ack.blockSignals(True)
         self.ack.setChecked(lv.acknowledged)
@@ -115,6 +128,8 @@ class LiveCard(Card):
 
     def _ack_toggled(self, on: bool) -> None:
         """The tick is the on/off switch: it takes effect at once, no Save click needed."""
+        if self._loading:
+            return
         s = self.ctx.settings()
         if s.live.acknowledged == on:
             return
@@ -129,6 +144,8 @@ class LiveCard(Card):
     def save(self) -> None:
         from fortnite_coach.recording.hotkeys import HotkeyError, parse_hotkey
 
+        if self._loading:
+            return
         s = self.ctx.settings()
         key = self.hotkey.text().strip()
         try:
@@ -139,17 +156,17 @@ class LiveCard(Card):
             if combo in taken:
                 raise HotkeyError("same")
         except HotkeyError:
-            self._msg = "⚠  " + tr("live.err_hotkey")
-            self.render()
-            return
+            key = None  # keep the previous hotkey; the other values are still saved
         lv = s.live.model_copy()
         lv.acknowledged = self.ack.isChecked()
         lv.interval_s, lv.frames = self.interval.value(), self.frames.value()
-        lv.max_tips_per_day, lv.show_seconds, lv.hotkey = self.max_day.value(), self.show_s.value(), key
+        lv.max_tips_per_day, lv.show_seconds = self.max_day.value(), self.show_s.value()
+        if key is not None:
+            lv.hotkey = key
         lv.model = self.model_combo.currentData() or ""
         s.live = lv
         self.ctx.save_settings(s)
-        self._msg = tr("live.saved")
+        self._msg = tr("live.saved") if key is not None else "⚠  " + tr("live.err_hotkey")
         self.saved.emit()
         self.render()
 
@@ -163,6 +180,7 @@ class LiveCard(Card):
         self.interval.setSuffix(" " + tr("live.sec"))
         self.show_s.setSuffix(" " + tr("live.sec"))
         self.save_btn.setText(tr("common.save"))
+        self.save_btn.hide()  # saved automatically
         self.preview_btn.setText(tr("live.preview"))
         from fortnite_coach.ai.gemini_config import live_model
 
